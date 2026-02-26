@@ -1,0 +1,235 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact - SklinT</title>
+  <meta name="description" content="Tell us about your project. We'd love to hear what you're working on and explore how we might help bring it to life." />
+  <link rel="stylesheet" href="{% static 'styles.css' %}" />
+</head>
+<body>
+  <div class="noise-overlay"></div>
+
+  <!-- Navigation -->
+  <header class="nav-header">
+    <nav class="container-wide nav-inner">
+      <a href="{% url 'home' %}" class="nav-logo"><img src="{% static 'Nav logo.png' %}" alt="SklinT" /></a>
+      <ul class="nav-links">
+        <li><a href="{% url 'home' %}" class="nav-link"><span>Home</span></a></li>
+        <li><a href="{% url 'projects' %}" class="nav-link"><span>Projects</span></a></li>
+        <li><a href="{% url 'about' %}" class="nav-link"><span>About</span></a></li>
+      </ul>
+      <a href="{% url 'contact' %}" class="nav-cta">
+        <span>Work With Us</span>
+        <span class="arrow"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+      </a>
+      <button class="mobile-menu-btn" aria-label="Toggle menu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <div class="mobile-menu">
+    <div class="mobile-menu-bg mesh-gradient"></div>
+    <a href="{% url 'home' %}">Home</a>
+    <a href="{% url 'projects' %}">Projects</a>
+    <a href="{% url 'about' %}">About</a>
+    <a href="{% url 'contact' %}" class="mobile-cta">Work With Us</a>
+  </div>
+
+  <main>
+    <!-- Hero -->
+    <section class="contact-hero mesh-gradient">
+      <div class="bg-glow"></div>
+      <div class="ring"><div></div></div>
+      <div class="container-narrow content animate-on-scroll">
+        <span class="services-badge glass-card">{{ content.badge_text|default:"Work With Us" }}</span>
+        <h1>
+          <span class="gradient-text">{{ content.hero_gradient_text|default:"Have an idea" }}</span><br />
+          <span class="italic">{{ content.hero_italic_text|default:"worth building?" }}</span>
+        </h1>
+        <p class="hero-desc">{{ content.hero_description|default:"Tell us about your project. We'd love to hear what you're working on and explore how we might help bring it to life." }}</p>
+      </div>
+      <div class="hero-line"></div>
+    </section>
+
+    <!-- Contact Form -->
+    <section class="contact-form-section">
+      <div class="container-narrow">
+        <div class="contact-layout">
+          <!-- Form -->
+          <div class="animate-on-scroll">
+            <form class="contact-form" method="post" action="{% url 'contact' %}" novalidate>
+              {% csrf_token %}
+              {% if form.non_field_errors %}
+              <div class="form-group">
+                {% for err in form.non_field_errors %}
+                <p>{{ err }}</p>
+                {% endfor %}
+              </div>
+              {% endif %}
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="name">Your name</label>
+                  <input type="text" id="name" name="name" required placeholder="xyz" value="{{ form.name.value|default_if_none:'' }}" />
+                  {% for err in form.name.errors %}
+                  <p>{{ err }}</p>
+                  {% endfor %}
+                </div>
+                <div class="form-group">
+                  <label for="email">Email address</label>
+                  <input type="email" id="email" name="email" required placeholder="xyz123@gmail.com" value="{{ form.email.value|default_if_none:'' }}" />
+                  {% for err in form.email.errors %}
+                  <p>{{ err }}</p>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="company">Company (optional)</label>
+                  <input type="text" id="company" name="company" placeholder="Company name" value="{{ form.company.value|default_if_none:'' }}" />
+                </div>
+                <div class="form-group">
+                  <label for="budget">Estimated budget</label>
+                  <select id="budget" name="budget">
+                    <option value="">Select a range</option>
+                    {% for option in budget_options %}
+                    <option value="{{ option.value }}"{% if form.budget.value == option.value %} selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                  {% for err in form.budget.errors %}
+                  <p>{{ err }}</p>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="form-group" id="custom-budget-group" style="display:none;">
+                <label for="custom_budget">Custom budget range</label>
+                <input type="text" id="custom_budget" name="custom_budget" placeholder="Ex: Rs75,000 - Rs1,20,000" value="{{ form.custom_budget.value|default_if_none:'' }}" />
+                {% for err in form.custom_budget.errors %}
+                <p>{{ err }}</p>
+                {% endfor %}
+                </div>
+              <div class="form-group">
+                <label for="message">Tell us about your project</label>
+                <textarea id="message" name="message" rows="5" required placeholder="What are you building? What challenges are you facing? What does success look like?">{{ form.message.value|default_if_none:'' }}</textarea>
+                {% for err in form.message.errors %}
+                <p>{{ err }}</p>
+                {% endfor %}
+              </div>
+              <button type="submit" class="btn-primary submit-btn">
+                <span class="btn-text" style="position:relative;z-index:1;display:flex;align-items:center;gap:0.75rem;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+                  Send Message
+                </span>
+                <span class="btn-spinner" style="position:relative;z-index:1;display:none;align-items:center;gap:0.75rem;">
+                  <div class="spinner"></div>
+                  Sending...
+                </span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Sidebar -->
+          <div class="contact-sidebar animate-on-scroll animate-on-scroll-delay-2">
+            <div class="quick-contact-card glass-card">
+              <h3>{{ content.quick_contact_title|default:"Quick Contact" }}</h3>
+              <a href="mailto:{{ content.quick_contact_email|default:'hello@sklint.studio' }}" class="email-link">
+                <div class="icon-circle">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </div>
+                {{ content.quick_contact_email|default:"hello@sklint.studio" }}
+                <svg class="arrow-hover" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+            </div>
+
+            <div class="response-time">
+              <h3>{{ content.response_title|default:"Response Time" }}</h3>
+              <p>{{ content.response_description|default:"We typically respond within 48 hours. For urgent inquiries, please mention it in your message." }}</p>
+            </div>
+
+            <div>
+              <h3>{{ content.next_steps_title|default:"What Happens Next?" }}</h3>
+              <ul class="steps-list">
+                {% for step in steps %}
+                <li class="step-item">
+                  <span class="step-num">{{ forloop.counter|stringformat:"02d" }}</span>
+                  <span class="step-text">{{ step }}</span>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            <div class="quote-card glass-card">
+              <div class="glow"></div>
+              <p>"{{ content.quote_text|default:"We only take on projects where we can make a real difference. If we're not the right fit, we'll tell you honestly and try to point you in the right direction." }}"</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast">
+    <h4></h4>
+    <p></p>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-bg"></div>
+    <div class="container-wide relative">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="{% url 'home' %}" class="footer-logo"><div class="logo-glow"></div><img src="{% static 'Nav logo.png' %}" alt="SklinT" /></a>
+          <p class="footer-tagline">Something Beyond the Obvious.<br />Crafting thoughtful digital experiences.</p>
+        </div>
+        <div class="footer-nav">
+          <div><h4>Navigate</h4><nav><a href="{% url 'home' %}" class="link-underline">Home</a><a href="{% url 'projects' %}" class="link-underline">Projects</a><a href="{% url 'about' %}" class="link-underline">About</a><a href="{% url 'contact' %}" class="link-underline">Contact</a></nav></div>
+          <div><h4>Connect</h4><nav><a href="#" class="link-underline">Twitter</a><a href="#" class="link-underline">LinkedIn</a><a href="#" class="link-underline">Dribbble</a><a href="#" class="link-underline">Instagram</a></nav></div>
+          <div><h4>Get in Touch</h4><nav><a href="mailto:hello@sklint.studio">hello@sklint.studio</a></nav></div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 SklinT. All rights reserved.</p>
+        <p>Designed &amp; built with intention.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{% static 'main.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var budget = document.getElementById('budget');
+      var customGroup = document.getElementById('custom-budget-group');
+      var customInput = document.getElementById('custom_budget');
+      if (!budget || !customGroup || !customInput) return;
+
+      function toggleCustomBudget() {
+        var showCustom = budget.value === 'custom';
+        customGroup.style.display = showCustom ? '' : 'none';
+        customInput.required = showCustom;
+        if (!showCustom) customInput.value = '';
+      }
+
+      toggleCustomBudget();
+      budget.addEventListener('change', toggleCustomBudget);
+    });
+  </script>
+  {% if submitted %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var toast = document.querySelector('.toast');
+      if (!toast) return;
+      toast.querySelector('h4').textContent = 'Message sent';
+      toast.querySelector('p').textContent = "We'll get back to you within 48 hours.";
+      toast.classList.add('show');
+      setTimeout(function () {
+        toast.classList.remove('show');
+      }, 3000);
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

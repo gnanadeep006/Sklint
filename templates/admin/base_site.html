@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/admin-ui.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="brand-wrap">
+  <h1 id="site-name"><a href="{% url 'admin:index' %}">SklinT Admin</a></h1>
+  <p class="brand-subtitle">Manage website content, projects, and contact leads</p>
+</div>
+{% endblock %}
+
