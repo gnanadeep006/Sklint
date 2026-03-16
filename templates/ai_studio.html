@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SklinT AI Integration</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #302b63;
+            --brand-secondary: #431c5c;
+            --brand-dark: #0f0c29;
+        }
+        body {
+            background-color: var(--brand-dark);
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .bg-brand-primary { background-color: var(--brand-primary); }
+        .bg-brand-secondary { background-color: var(--brand-secondary); }
+        #voice-select {
+            color: #f8f7ff;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        #voice-select option {
+            background-color: #14122b;
+            color: #f8f7ff;
+        }
+        .model-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+        .model-chip {
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: none;
+            letter-spacing: 0.02em;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-display font-bold tracking-tight">SklinT AI</h1>
+                    <p class="text-xs text-white/40 font-mono uppercase tracking-widest">Something Beyond the Obvious</p>
+                </div>
+            </div>
+            
+            <div class="flex bg-white/5 p-1 rounded-2xl" id="mode-toggle">
+                <button data-mode="tts" class="mode-btn px-4 py-2 rounded-xl bg-brand-primary text-white shadow-lg transition-all">Text to Voice</button>
+                <button data-mode="stt" class="mode-btn px-4 py-2 rounded-xl text-white/40 hover:text-white transition-all">Voice to Text</button>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <!-- TTS Section -->
+            <div id="tts-section" class="flex flex-col gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 glass rounded-3xl p-6 flex flex-col min-h-[300px]">
+                        <label class="text-xs font-mono uppercase text-white/40 mb-4 tracking-widest">Input Text</label>
+                        <textarea id="tts-input" class="flex-1 bg-transparent border-none focus:outline-none text-lg resize-none placeholder:text-white/10" placeholder="Enter text to convert to speech..."></textarea>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="glass rounded-3xl p-6">
+                            <label class="text-xs font-mono uppercase text-white/40 mb-4 block tracking-widest">Select Voice</label>
+                            <select id="voice-select" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none">
+                                <option value="Kore">Kore (Balanced)</option>
+                                <option value="Fenrir">Fenrir (Deep)</option>
+                                <option value="Puck">Puck (Playful)</option>
+                                <option value="Charon">Charon (Formal)</option>
+                                <option value="Zephyr">Zephyr (Soft)</option>
+                            </select>
+                            <div class="model-row">
+                                <span class="font-mono">TTS Model</span>
+                                <span class="model-chip">gemini-2.5-flash-preview-tts</span>
+                            </div>
+                        </div>
+                        <button id="generate-tts" class="w-full py-4 rounded-3xl bg-brand-primary text-white font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
+                            Generate Voice
+                        </button>
+                    </div>
+                </div>
+                <div id="tts-result" class="hidden glass rounded-3xl p-6 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="play-audio" class="w-12 h-12 rounded-2xl bg-brand-primary flex items-center justify-center text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </button>
+                        <div>
+                            <p class="font-medium">Audio Generated</p>
+                            <p class="text-xs text-white/40">Ready to play or download</p>
+                        </div>
+                    </div>
+                    <a id="download-audio" download="sklint-voice.wav" class="p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- STT Section (Hidden by default) -->
+            <div id="stt-section" class="hidden flex flex-col gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass rounded-3xl p-8 flex flex-col items-center justify-center gap-6 text-center">
+                        <button id="mic-btn" class="w-24 h-24 rounded-full bg-brand-secondary flex items-center justify-center transition-all">
+                            <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                        </button>
+                        <div>
+                            <h3 id="mic-status" class="text-xl font-display font-bold">Start Recording</h3>
+                            <p class="text-sm text-white/40 mt-2">Click the mic to start speaking</p>
+                        </div>
+                        <button id="generate-stt" class="hidden w-full py-3 rounded-2xl bg-brand-primary text-white font-bold transition-all">
+                            Generate Text
+                        </button>
+                    </div>
+                    <div class="md:col-span-2 glass rounded-3xl p-6 flex flex-col min-h-[300px]">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-xs font-mono uppercase text-white/40 tracking-widest">Transcription</label>
+                            <button id="copy-btn" class="text-xs text-white/40 hover:text-white transition-colors">Copy Text</button>
+                        </div>
+                        <div class="model-row mb-4">
+                            <span class="font-mono">STT Model</span>
+                            <span class="model-chip">gemini-2.5-flash</span>
+                        </div>
+                        <div id="stt-output" class="flex-1 text-lg leading-relaxed text-white/10 italic">
+                            Your transcription will appear here...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-12 text-center">
+            <p class="text-[10px] font-mono uppercase text-white/20 tracking-[0.2em]">Powered by SklinT AI Intelligence</p>
+        </footer>
+    </div>
+
+    <!-- Integration Script -->
+    <script>
+        window.AI_STUDIO_CONFIG = {
+            ttsUrl: "{% url 'ai_studio_tts' %}",
+            sttUrl: "{% url 'ai_studio_stt' %}"
+        };
+    </script>
+    <script type="module" src="{% static 'ai_studio.js' %}"></script>
+</body>
+</html>

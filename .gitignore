@@ -16,8 +16,10 @@ db.sqlite3
 media/
 staticfiles/
 
-# Build / packaging
-build/
+# Environment variables
+.env
+.env.local
+.env.production
 dist/
 *.egg-info/
 .eggs/

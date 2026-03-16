@@ -1,6 +1,16 @@
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.http import require_POST
+
+import json
+import urllib.error
+import urllib.request
 
 from clints.models import FeaturedProject
+
+GEMINI_API_KEY = "AIzaSyC44Fn05iUXJTyARTH9HOsmqgjy_zevjDo"
+GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+GEMINI_STT_MODEL = "gemini-2.5-flash"
 
 
 DEFAULT_FEATURED_PROJECTS = [
@@ -109,3 +119,144 @@ def projects(request):
 def error(request):
     return render(request, 'error.html')
     
+
+def ai_studio(request):
+    return render(request, "ai_studio.html")
+
+@require_POST
+def ai_studio_tts(request):
+    api_key = GEMINI_API_KEY
+    if not api_key or api_key == "YOUR_GEMINI_API_KEY":
+        return JsonResponse({"error": "GEMINI API key is not set on the server."}, status=500)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON payload."}, status=400)
+
+    text_input = (payload.get("text") or "").strip()
+    voice = (payload.get("voice") or "Kore").strip()
+
+    if not text_input:
+        return JsonResponse({"error": "Text is required."}, status=400)
+
+    request_body = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": text_input}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {
+                "voiceConfig": {
+                    "prebuiltVoiceConfig": {
+                        "voiceName": voice
+                    }
+                }
+            }
+        }
+    }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TTS_MODEL}:generateContent"
+    try:
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(request_body).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", "ignore")
+        return JsonResponse({"error": "Gemini TTS request failed.", "details": details}, status=getattr(exc, 'code', 502))
+    except Exception as exc:
+        return JsonResponse({"error": "Unexpected error while contacting Gemini.", "details": str(exc)}, status=502)
+
+    audio_base64 = None
+    mime_type = None
+    for candidate in response_data.get("candidates", []):
+        content = candidate.get("content") or {}
+        for part in content.get("parts", []):
+            inline = part.get("inlineData") or {}
+            if inline.get("data"):
+                audio_base64 = inline.get("data")
+                mime_type = inline.get("mimeType")
+                break
+        if audio_base64:
+            break
+
+    if not audio_base64:
+        return JsonResponse({"error": "No audio returned from Gemini."}, status=502)
+
+    return JsonResponse({"audio_base64": audio_base64, "mime_type": mime_type, "sample_rate": 24000})
+
+
+@require_POST
+def ai_studio_stt(request):
+    api_key = GEMINI_API_KEY
+    if not api_key or api_key == "YOUR_GEMINI_API_KEY":
+        return JsonResponse({"error": "GEMINI API key is not set on the server."}, status=500)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON payload."}, status=400)
+
+    audio_base64 = (payload.get("audio_base64") or "").strip()
+    mime_type = (payload.get("mime_type") or "audio/webm").strip()
+
+    if not audio_base64:
+        return JsonResponse({"error": "Audio data is required."}, status=400)
+
+    request_body = {
+        "contents": [
+            {
+                "parts": [
+                    {"inlineData": {"data": audio_base64, "mimeType": mime_type}},
+                    {"text": "Transcribe the spoken words only, verbatim. Do not describe non-speech sounds. If no speech is present, return an empty string."}
+                ]
+            }
+        ]
+    }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_STT_MODEL}:generateContent"
+    try:
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(request_body).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", "ignore")
+        return JsonResponse({"error": "Gemini STT request failed.", "details": details}, status=getattr(exc, 'code', 502))
+    except Exception as exc:
+        return JsonResponse({"error": "Unexpected error while contacting Gemini.", "details": str(exc)}, status=502)
+
+    text_parts = []
+    for candidate in response_data.get("candidates", []):
+        content = candidate.get("content") or {}
+        for part in content.get("parts", []):
+            if "text" in part:
+                text_parts.append(part["text"])
+        if text_parts:
+            break
+
+    transcript = "\n".join(text_parts).strip()
+    if not transcript:
+        transcript = "No speech detected."
+
+    return JsonResponse({"text": transcript})
+

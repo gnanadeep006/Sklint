@@ -1,101 +1,24 @@
-<<<<<<< HEAD
-# sklint
-=======
-# SklinT
+# SklinT AI Web Integration Kit
 
-SklinT is a Django-based portfolio website with a custom admin workflow to manage:
+This folder contains everything you need to integrate the SklinT AI Text-to-Voice and Voice-to-Text features into your existing Django website.
 
-- Featured projects (home + projects pages)
-- Project modal content (overview/problem/solution/outcome)
-- Contact page content
-- Contact form submissions and CSV export
+## Files Included:
+- `index.html`: The frontend structure using Tailwind CSS.
+- `script.js`: The core logic using the Gemini AI SDK.
+- `django_backend.py`: Sample Django code (View, URL, Template logic).
 
-## Tech Stack
+## Quick Start:
+1. Copy the contents of `index.html` into a new Django template (e.g., `templates/sklint/index.html`).
+1. Place `script.js` in your static files directory.
+1. Update `script.js` with your **Gemini API Key**.
+1. Add the view and URL patterns from `django_backend.py` to your Django project.
 
-- Python
-- Django
-- SQLite (default)
-- HTML/CSS/JavaScript (Django templates + static assets)
+## Features:
+- **Text to Voice**: Supports 5 high-quality voices with download capability.
+- **Voice to Text**: Real-time recording and transcription using Gemini 3 Flash.
+- **Responsive Design**: Fully responsive layout built with Tailwind CSS.
 
-## Project Structure
+## API Key:
+You can get your Gemini API Key from the [Google AI Studio](https://aistudio.google.com/app/apikey).
 
-```text
-sklint/
-  manage.py
-  project/          # Django project settings, URLs, base views
-  clints/           # App models/admin/forms/views for dynamic content
-  templates/        # Frontend templates
-  statics/          # CSS/JS/images
-  media/            # Uploaded files (e.g., project images)
-```
-
-## Setup (Local)
-
-1. Clone repository and enter project:
-```bash
-git clone <your-repo-url>
-cd sklint
-```
-
-2. Create and activate virtual environment:
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-```
-
-3. Install Django:
-```bash
-pip install django
-```
-
-4. Run migrations:
-```bash
-python manage.py migrate
-```
-
-5. Create admin user:
-```bash
-python manage.py createsuperuser
-```
-
-6. Run server:
-```bash
-python manage.py runserver
-```
-
-Open:
-- Site: `http://127.0.0.1:8000/`
-- Admin: `http://127.0.0.1:8000/admin/`
-
-## Dynamic Content (Admin)
-
-Use **Featured projects** in admin to control:
-
-- Home featured cards
-- Projects page cards
-- Projects modal details
-
-Image priority:
-1. `image_file` (uploaded file)
-2. `image_url` fallback
-
-Use **Contact Page Content**, **Contact steps**, and **Budget options** to edit the contact page.
-
-Use **Contact submissions** to review leads and export selected rows as CSV.
-
-## Media & Static
-
-- Static files served from `statics/`
-- Media uploads served from `media/`
-- In development, media URL routing is enabled when `DEBUG=True`
-
-## Notes
-
-- Default DB is SQLite (`db.sqlite3`).
-- This project currently has no automated tests; add tests in `clints/tests.py` and run:
-```bash
-python manage.py test
-```
-
->>>>>>> 316ede6 (any commit)
+**Note:** For security, ensure you do not commit your API key to public repositories. Use environment variables in your Django settings.
