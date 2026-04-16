@@ -1,4 +1,4 @@
-﻿"""
+"""
 URL configuration for project project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -24,9 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='home'),
     path('about/', views.about, name='about'),
-    path('ai-studio/', views.ai_studio, name='ai_studio'),
-    path('ai-studio/tts/', views.ai_studio_tts, name='ai_studio_tts'),
-    path('ai-studio/stt/', views.ai_studio_stt, name='ai_studio_stt'),
     path('', include('clints.urls')),
     path('projects/', views.projects, name='projects'),
     path('error/', views.error, name='error'),
@@ -34,5 +31,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-

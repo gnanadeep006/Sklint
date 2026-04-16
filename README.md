@@ -1,6 +1,6 @@
 # SklinT AI Web Integration Kit
 
-This folder contains everything you need to integrate the SklinT AI Text-to-Voice and Voice-to-Text features into your existing Django website.
+This folder contains the SklinT Django project and its website templates, static assets, and app code.
 
 ## Files Included:
 - `index.html`: The frontend structure using Tailwind CSS.
@@ -14,11 +14,10 @@ This folder contains everything you need to integrate the SklinT AI Text-to-Voic
 1. Add the view and URL patterns from `django_backend.py` to your Django project.
 
 ## Features:
-- **Text to Voice**: Supports 5 high-quality voices with download capability.
-- **Voice to Text**: Real-time recording and transcription using Gemini 3 Flash.
 - **Responsive Design**: Fully responsive layout built with Tailwind CSS.
 
 ## API Key:
 You can get your Gemini API Key from the [Google AI Studio](https://aistudio.google.com/app/apikey).
 
 **Note:** For security, ensure you do not commit your API key to public repositories. Use environment variables in your Django settings.
+
