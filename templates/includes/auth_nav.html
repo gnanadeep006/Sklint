@@ -1,0 +1,11 @@
+{% if appid_enabled %}
+  {% if appid_user %}
+  <a href="{% url 'appid_logout' %}?next={{ request.path|urlencode }}" class="nav-cta nav-auth">
+    <span>{{ appid_user.name|default:"Signed in" }}</span>
+  </a>
+  {% else %}
+  <a href="{% url 'appid_login' %}?next={{ request.path|urlencode }}" class="nav-cta nav-auth">
+    <span>Sign In</span>
+  </a>
+  {% endif %}
+{% endif %}

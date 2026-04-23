@@ -1,0 +1,7 @@
+{% if appid_enabled %}
+  {% if appid_user %}
+  <a href="{% url 'appid_logout' %}?next={{ request.path|urlencode }}">Sign out {{ appid_user.name|default:"" }}</a>
+  {% else %}
+  <a href="{% url 'appid_login' %}?next={{ request.path|urlencode }}">Sign In</a>
+  {% endif %}
+{% endif %}

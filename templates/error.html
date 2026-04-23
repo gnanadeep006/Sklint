@@ -4,15 +4,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>404 — SklinT</title>
+  <title>{{ error_code|default:"404" }} — SklinT</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}" />
 </head>
 <body>
   <div class="not-found">
-    <div>
-      <h1>404</h1>
+    <div class="error-content">
+      <h1>{{ error_code|default:"404" }}</h1>
       <p>Oops! Page not found</p>
-      <a href="{% url 'home' %}">Return to Home</a>
+      
+      {% if meme %}
+      <div class="error-meme">
+        <img src="{{ meme.url }}" alt="{{ meme.alt }}" loading="lazy" />
+      </div>
+      {% endif %}
+      
+      <a href="{% url 'home' %}" class="btn-primary">Return to Home</a>
     </div>
   </div>
 </body>

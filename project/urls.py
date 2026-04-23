@@ -22,12 +22,17 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('auth/login/', views.appid_login, name='appid_login'),
+    path('auth/callback/', views.appid_callback, name='appid_callback'),
+    path('auth/logout/', views.appid_logout, name='appid_logout'),
     path('', views.index, name='home'),
     path('about/', views.about, name='about'),
     path('', include('clints.urls')),
+    path('coderoast/', include('coderoast.urls')),
     path('projects/', views.projects, name='projects'),
     path('error/', views.error, name='error'),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

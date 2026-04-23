@@ -1,0 +1,1038 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeGuilt Ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<style>
+body{margin:0;background:radial-gradient(circle at top,#1c1c24 0,#0d0d12 45%,#070709 100%);color:#f7f1eb;font-family:'Space Grotesk',sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:24px}
+.hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}
+.heroCopy{max-width:780px}
+.hero a{color:#b8b5c7;text-decoration:none}
+.hero h1{margin:14px 0 8px;font-size:clamp(2.2rem,6vw,4rem)}
+.hero p{color:#b7b1c2;max-width:780px;line-height:1.6}
+.heroActions{display:flex;justify-content:flex-end;min-width:max-content}
+.heroAuth{display:flex;flex-direction:column;align-items:center;gap:8px}
+.heroActions .nav-cta{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#f7f1eb;text-decoration:none;font-weight:700;box-shadow:0 12px 32px rgba(0,0,0,.18);transition:transform .18s ease,background .18s ease,border-color .18s ease}
+.heroActions .nav-cta:hover{transform:translateY(-1px);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.heroAuthNote{margin:0;font-size:.78rem;line-height:1.35;color:#9a95a8;text-align:center}
+.grid{display:grid;grid-template-columns:1.04fr .96fr;gap:18px}
+.panel{background:linear-gradient(180deg,rgba(29,29,35,.96),rgba(17,17,21,.96));border:1px solid rgba(255,255,255,.08);border-radius:26px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+  .head{display:flex;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .sub{color:#a6a0b1;font-size:.92rem}
+  .editorBox{padding:16px}
+  select,button{font:inherit}
+  select{background:#11131a;color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.CodeMirror{height:500px;font-family:'JetBrains Mono',monospace;font-size:14px;border-radius:20px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px}
+.run{background:linear-gradient(135deg,#ff455d,#ff7c57);color:#fff;border:none;border-radius:16px;padding:14px 24px;font-weight:700;letter-spacing:.08em;box-shadow:0 12px 30px rgba(255,90,90,.28)}
+.run:disabled{opacity:.7}
+.run.loading::after{content:'...';animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.stack{display:grid;grid-template-rows:auto 1fr;height:100%}
+.meme,.avatarPane{padding:18px}
+.meme{border-bottom:1px solid rgba(255,255,255,.08)}
+  .memeCard{position:relative;min-height:400px;border-radius:24px;overflow:hidden;background:radial-gradient(circle at top,rgba(48,50,64,.9),#111219 68%);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 48px rgba(0,0,0,.24)}
+  .memeCard img{width:100%;height:400px;display:block;object-fit:contain;object-position:center;background:transparent}
+.panelNote{display:grid;gap:12px;margin-top:14px}
+.mistake{min-height:52px;color:#f4edf3;font-size:1rem;line-height:1.65}
+.badge{display:inline-flex;padding:8px 12px;border-radius:999px;background:#24242a;border:1px solid rgba(255,255,255,.08);font-size:.85rem;width:max-content}
+  .avatarPane{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+  .bot{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 18px 26px rgba(0,0,0,.34))}
+  .bot.talk{animation:bounce .55s infinite}
+  .botShell{position:absolute;inset:0;border-radius:32px;background:
+    radial-gradient(circle at 30% 22%,rgba(124,245,255,.18),transparent 30%),
+    linear-gradient(145deg,rgba(73,82,115,.95),rgba(19,22,31,.98));
+    border:1px solid rgba(145,223,255,.18);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 34px rgba(0,0,0,.26)}
+  .botShell::before{content:'';position:absolute;inset:10px;border-radius:24px;border:1px solid rgba(116,214,255,.12)}
+  .botHalo{position:absolute;inset:-10px;border-radius:38px;background:radial-gradient(circle,rgba(67,220,255,.2) 0,rgba(67,220,255,.06) 45%,transparent 72%);filter:blur(6px);opacity:.9}
+  .botVisor{position:absolute;top:25px;left:17px;right:17px;height:34px;border-radius:18px;background:linear-gradient(180deg,rgba(9,17,30,.92),rgba(14,28,47,.88));border:1px solid rgba(111,223,255,.18);overflow:hidden}
+  .botVisor::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(111,223,255,.1),transparent);transform:translateX(-100%);animation:scan 4.8s linear infinite}
+  .botEye{position:absolute;top:12px;width:18px;height:10px;border-radius:999px;background:linear-gradient(90deg,#8ef6ff,#d8fbff);box-shadow:0 0 14px rgba(99,237,255,.65)}
+  .botEye.left{left:18px}
+  .botEye.right{right:18px}
+  .botCore{position:absolute;left:50%;bottom:21px;width:42px;height:42px;margin-left:-21px;border-radius:50%;background:radial-gradient(circle,#8cf4ff 0,#35c8ff 30%,rgba(31,72,108,.4) 68%,transparent 70%);box-shadow:0 0 24px rgba(79,223,255,.34)}
+  .botCore::before{content:'';position:absolute;inset:10px;border-radius:50%;border:1px solid rgba(255,255,255,.22)}
+  .botMouth{position:absolute;left:50%;top:67px;width:28px;height:8px;margin-left:-14px;border-radius:999px;background:linear-gradient(90deg,rgba(110,235,255,.2),rgba(110,235,255,.95),rgba(110,235,255,.2));box-shadow:0 0 12px rgba(110,235,255,.28)}
+  .botBadge{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);padding:4px 10px;border-radius:999px;background:#141923;border:1px solid rgba(145,223,255,.12);font-size:.62rem;font-weight:700;letter-spacing:.18em;color:#c7f7ff}
+  .bot[data-mood="syntax"] .botEye,
+  .bot[data-mood="missing"] .botEye{height:12px;background:linear-gradient(90deg,#9af6ff,#ffffff)}
+  .bot[data-mood="syntax"] .botMouth,
+  .bot[data-mood="missing"] .botMouth{width:20px;height:12px;margin-left:-10px;border-radius:0 0 14px 14px;background:linear-gradient(180deg,rgba(116,235,255,.24),rgba(116,235,255,.95))}
+  .bot[data-mood="logic"] .botEye.left{transform:skewX(-24deg) scaleY(.7)}
+  .bot[data-mood="logic"] .botEye.right{transform:skewX(24deg) scaleY(.7)}
+  .bot[data-mood="logic"] .botMouth{width:32px;height:4px;margin-left:-16px}
+  .bot[data-mood="indent"] .botEye.left{transform:translateY(2px);width:14px}
+  .bot[data-mood="indent"] .botEye.right{transform:translateY(-2px);width:22px}
+  .bot[data-mood="indent"] .botMouth{width:22px;height:6px;margin-left:-11px}
+  .bot[data-mood="typo"] .botEye.left{transform:rotate(-12deg)}
+  .bot[data-mood="typo"] .botEye.right{transform:rotate(12deg)}
+  .bot[data-mood="typo"] .botMouth{width:12px;height:12px;margin-left:-6px;border-radius:50%;background:rgba(142,246,255,.95)}
+  .bot[data-mood="success"] .botEye{background:linear-gradient(90deg,#92ffc0,#e9fff2)}
+  .bot[data-mood="success"] .botCore{background:radial-gradient(circle,#b6ffd3 0,#4fe989 34%,rgba(25,94,68,.38) 68%,transparent 70%)}
+  .bot[data-mood="success"] .botMouth{width:26px;height:10px;margin-left:-13px;border-radius:0 0 16px 16px;background:linear-gradient(180deg,rgba(146,255,192,.25),rgba(146,255,192,.95))}
+  @keyframes bounce{50%{transform:translateY(-9px)}}
+  @keyframes scan{100%{transform:translateX(100%)}}
+.caps{background:#101015;border:1px solid rgba(255,255,255,.06);border-radius:22px;padding:16px;min-height:160px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.voiceMeta{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.voiceNote,.voiceStyle{color:#938da2;font-size:.85rem}
+.word{color:rgba(255,255,255,.45)}
+.word.done{color:rgba(255,255,255,.76)}
+.word.now{color:#fff;text-shadow:0 0 18px rgba(255,110,125,.35)}
+.out{margin-top:18px;padding:22px;border-radius:22px;background:#18181d;border:1px solid rgba(255,255,255,.08)}
+.out.error{background:linear-gradient(180deg,rgba(144,39,46,.28),#18181d)}
+.out.success{background:linear-gradient(180deg,rgba(31,157,97,.18),#18181d)}
+pre{margin:16px 0 0;background:#101015;border-radius:16px;padding:16px;overflow:auto}
+code{font-family:'JetBrains Mono',monospace}
+a{color:#aaa}
+  @media(max-width:980px){.hero{flex-direction:column}.heroCopy{max-width:none}.heroActions{justify-content:flex-start}.grid{grid-template-columns:1fr}.memeCard{min-height:340px}.memeCard img{height:340px}}
+  @media(max-width:640px){.wrap{padding:12px}.heroActions{width:100%}.heroActions .nav-cta{width:100%}.head,.row{flex-direction:column;align-items:stretch}select,button{width:100%}.avatarPane{grid-template-columns:1fr}.memeCard{min-height:280px}.memeCard img{height:280px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="heroCopy">
+      <a href="/">&larr; Back to home</a>
+      <h1>CodeGuilt Ai</h1>
+      <p>Your code deserves to be judged. Now it rotates through real internet memes, keeps the sound hit, and tries to use a more playful roast voice.</p>
+    </div>
+    <div class="heroActions">
+      <div class="heroAuth">
+        {% include 'includes/auth_nav.html' %}
+        <p class="heroAuthNote">Sign in using integrated IBM App ID</p>
+      </div>
+    </div>
+  </div>
+  <div class="grid">
+    <section class="panel">
+      <div class="head">
+        <div>
+          <strong>Panel 1 - Code Editor</strong>
+          <div class="sub">CodeMirror with language switching</div>
+        </div>
+        <div class="controls">
+          <select id="lang" aria-label="Code language">
+            <option>Python</option>
+            <option>JavaScript</option>
+            <option>Java</option>
+            <option>C++</option>
+          </select>
+          <select id="roastLang" aria-label="Roast language">
+            <option value="english">Roast in English (India)</option>
+            <option value="hindi">Roast in Hindi</option>
+            <option value="telugu">Roast in Telugu</option>
+          </select>
+        </div>
+      </div>
+      <div class="editorBox">
+        <textarea id="code">def greet(name)
+    print("Hello, " + name)
+
+greet("World")</textarea>
+        <div class="row">
+          <div class="sub">A random meme lands first, then the roast voice and captions follow.</div>
+          <button id="run" class="run">RUN</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel stack">
+      <div class="meme">
+        <strong>Panel 2 - Meme + Roast</strong>
+        <div id="drop" class="memeCard">
+          <img id="memeImage" alt="Random meme reaction">
+          <div class="memeShade"></div>
+          <div class="memeTop">
+            <span class="memeChip"><span class="memeDot"></span><strong id="memeUser">@coderoast</strong></span>
+            <span class="memeChip" id="memeTime">fresh drop</span>
+          </div>
+          <div class="memeBottom">
+            <div class="memeCaption">
+              <strong id="memeTitle">Random internet meme loading...</strong>
+              <span id="memeLine">Your roast panel is waiting for a bug worthy of humiliation.</span>
+            </div>
+            <div class="memeStats">
+              <span id="memeReaction" class="pill">viral 0.9M</span>
+              <span id="memeShare" class="pill">share 18.4K</span>
+            </div>
+          </div>
+        </div>
+        <div class="panelNote">
+          <div id="mistake" class="mistake">Your meme panel is waiting for the first bug to embarrass itself.</div>
+          <div id="sound" class="badge">SFX ready to drop the soundtrack</div>
+        </div>
+      </div>
+      <div class="avatarPane">
+        <div id="bot" class="bot" data-mood="general" aria-hidden="true">
+          <div class="botHalo"></div>
+          <div class="botShell"></div>
+          <div class="botVisor">
+            <span class="botEye left"></span>
+            <span class="botEye right"></span>
+          </div>
+          <div class="botMouth"></div>
+          <div class="botCore"></div>
+          <div class="botBadge">ROAST</div>
+        </div>
+        <div>
+          <div id="caps" class="caps"><span class="sub">Captions will appear word by word here.</span></div>
+          <div class="voiceMeta">
+            <div id="voiceNote" class="voiceNote">Voice mode: loading browser voices</div>
+            <div id="voiceStyle" class="voiceStyle">Voice style: dry sarcasm</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <section id="out" class="out">
+    <strong id="status">Awaiting roast</strong>
+    <div id="etype" class="badge" style="margin-left:12px">IDLE</div>
+    <p id="err">No analysis yet.</p>
+    <p id="fix">Fix suggestion will appear here.</p>
+    <pre><code id="fixed"># Corrected code will appear here.</code></pre>
+  </section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script>
+const memeThemes={
+  syntax:{user:'@syntaxpolice',reaction:'yikes 1.4M',share:'quote 42.8K',sound:'sad trombone',style:'annoyed eyebrow'},
+  logic:{user:'@brainlagdaily',reaction:'bro 886K',share:'share 27.1K',sound:'record scratch',style:'disbelief'},
+  indent:{user:'@spacebarcourt',reaction:'oops 772K',share:'save 13.6K',sound:'double clap',style:'side eye'},
+  missing:{user:'@missingpiece',reaction:'nah 1.1M',share:'share 19.4K',sound:'whoosh drop',style:'dramatic pause'},
+  typo:{user:'@oopsfeed',reaction:'bruh 694K',share:'save 11.8K',sound:'pop hit',style:'teasing'},
+  general:{user:'@forYouBug',reaction:'cooked 2.3M',share:'repost 51.2K',sound:'dramatic sting',style:'dry sarcasm'}
+};
+const hotMemeNames=new Set([
+  'Drake Hotline Bling',
+  'Two Buttons',
+  'Distracted Boyfriend',
+  'Left Exit 12 Off Ramp',
+  'Batman Slapping Robin',
+  'UNO Draw 25 Cards',
+  'Running Away Balloon',
+  'Waiting Skeleton',
+  'Expanding Brain',
+  'Mocking Spongebob',
+  'Woman Yelling At Cat',
+  'Buff Doge vs. Cheems',
+  "Gru's Plan",
+  'Roll Safe Think About It',
+  'Tuxedo Winnie The Pooh',
+  'Surprised Pikachu',
+  'Monkey Puppet',
+  'This Is Fine',
+  'Unsettled Tom',
+  'Laughing Leo',
+  'American Chopper Argument',
+  'Clown Applying Makeup',
+  "They're The Same Picture",
+  'Bike Fall',
+  'Who Killed Hannibal',
+  'Always Has Been',
+  'Spongebob Ight Imma Head Out',
+  'Hard To Swallow Pills',
+  'Captain Picard Facepalm',
+  'Bad Luck Brian',
+  'Leo Oscars Meme',
+  'Leonardo DiCaprio Oscars 2026',
+  'high vs low cortisol',
+  'dlss 5 on/off',
+  'Thank You Chainsaw Man',
+  'I just hit the jackpot',
+  'Higuruma face',
+  'Live Optimus Prime reaction',
+  'Flight Reacts Scared',
+  'Minion laughing with popcorn',
+  'me looking at peak',
+  'Shut up I\'m watching peak',
+  'You Got A Little Too Into X',
+  'Market Crash',
+  'Disaster Girl',
+  'Boardroom Meeting Suggestion',
+  'Is This A Pigeon',
+  'Blank Nut Button',
+  'Epic Handshake',
+  'Sad Pablo Escobar',
+  'Change My Mind',
+  'Anakin Padme 4 Panel',
+  'The Rock Driving',
+  'Always Has Been',
+  'I Bet He\'s Thinking About Other Women',
+  'X, X Everywhere',
+  'Third World Skeptical Kid',
+  'Put It Somewhere Else Patrick',
+  'Bernie I Am Once Again Asking For Your Support',
+  'They Don\'t Know',
+  'Mark Zuckerberg',
+  'This Is Where I\'d Put My Trophy If I Had One',
+  'That Would Be Great',
+  'A Train Hitting A School Bus',
+  'Disappointed Black Guy',
+  'Pawn Stars Best I Can Do',
+  'Megamind Peeking',
+  'Awkward Look Monkey Puppet',
+  'Monkey Looking Away',
+  'Crying Cat',
+  'Running Away Balloon',
+  'Jerry Slamming Door',
+  'Oprah You Get A',
+  'Squidward Window'
+]);
+const memeBlockList=[
+  /trump/i,
+  /bernie/i,
+  /steven crowder/i,
+  /bill signing/i,
+  /yoda/i,
+  /boat cat/i,
+  /be like bill/i,
+  /confession bear/i
+];
+let fallbackMemes=[
+  {name:'Laughing Leo',url:'https://i.imgflip.com/4653i1.jpg',tags:['general','logic']},
+  {name:'Unsettled Tom',url:'https://i.imgflip.com/2wifvo.jpg',tags:['syntax','logic','missing']},
+  {name:'Mocking Spongebob',url:'https://i.imgflip.com/1otk96.jpg',tags:['typo','general']},
+  {name:'Woman Yelling At Cat',url:'https://i.imgflip.com/345v97.jpg',tags:['logic','general']},
+  {name:'Waiting Skeleton',url:'https://i.imgflip.com/2fm6x.jpg',tags:['missing','indent']},
+  {name:'Facepalm Robin',url:'https://i.imgflip.com/9ehk.jpg',tags:['syntax','typo']},
+  {name:'This Is Fine',url:'https://i.imgflip.com/wxica.jpg',tags:['general','logic','syntax']},
+  {name:'Disaster Girl',url:'https://i.imgflip.com/23ls.jpg',tags:['general','logic']},
+  {name:'Third World Skeptical Kid',url:'https://i.imgflip.com/265k.jpg',tags:['logic','missing']},
+  {name:'Boardroom Meeting Suggestion',url:'https://i.imgflip.com/m78d.jpg',tags:['syntax','missing']},
+  {name:'Is This A Pigeon',url:'https://i.imgflip.com/1o00in.jpg',tags:['logic','typo']},
+  {name:'Epic Handshake',url:'https://i.imgflip.com/28j0te.jpg',tags:['general','success']},
+  {name:'Change My Mind',url:'https://i.imgflip.com/24y43o.jpg',tags:['logic','general']},
+  {name:'Blank Nut Button',url:'https://i.imgflip.com/1yxkcp.jpg',tags:['indent','syntax']},
+  {name:'Put It Somewhere Else Patrick',url:'https://i.imgflip.com/3oevdk.jpg',tags:['indent','typo']},
+  {name:'Sad Pablo Escobar',url:'https://i.imgflip.com/2cjr7j.jpg',tags:['missing','general']},
+  {name:'X, X Everywhere',url:'https://i.imgflip.com/1ihzfe.jpg',tags:['general','syntax']},
+  {name:'They Don\'t Know',url:'https://i.imgflip.com/3vzej.jpg',tags:['general','logic']}
+];
+let reactionGifs=[
+  {name:'My Honest Reaction',url:'https://i.imgflip.com/8vr89f.gif',tags:['general','logic']},
+  {name:'Who Tf Are You',url:'https://i.imgflip.com/7xba16.gif',tags:['missing','logic']},
+  {name:'Rustled Jimmies',url:'https://i.imgflip.com/2o3nv0.gif',tags:['general','indent']},
+  {name:'Smokey Revenge',url:'https://i.imgflip.com/1rueeq.gif',tags:['syntax','logic']},
+  {name:'Flight Reacts',url:'https://i.imgflip.com/82sn0u.gif',tags:['general','logic']},
+  {name:'Thumbs Up Dude',url:'https://i.imgflip.com/1ov64j.gif',tags:['success','general']},
+  {name:'Rock Driving Reaction',url:'https://i.imgflip.com/2xfivo.gif',tags:['typo','missing']},
+  {name:'Coat Perhaps',url:'https://i.imgflip.com/2xk3kb.gif',tags:['general','logic']},
+  {name:'Dying Inside',url:'https://i.imgflip.com/1bgw.jpg',tags:['typo','syntax']},
+  {name:'Confused Blinking',url:'https://i.imgflip.com/2hmt4.jpg',tags:['logic','missing']},
+  {name:'Keyboard Smash',url:'https://i.imgflip.com/4acd7j.png',tags:['indent','syntax']},
+  {name:'Deep Regret',url:'https://i.imgflip.com/30zz5g.jpg',tags:['typo','general']},
+  {name:'Shocked Pikachu',url:'https://i.imgflip.com/2kbn1e.jpg',tags:['logic','missing']},
+  {name:'Crying Cat',url:'https://i.imgflip.com/4sz4u.jpg',tags:['missing','general']},
+  {name:'Hide The Pain Harold',url:'https://i.imgflip.com/gk5el.jpg',tags:['general','syntax']},
+  {name:'Monkey Puppet Side Eye',url:'https://i.imgflip.com/2gnnjh.jpg',tags:['logic','typo']},
+  {name:'Anakin And Padme',url:'https://i.imgflip.com/3si4.jpg',tags:['logic','missing']},
+  {name:'Gru Plan Reveal',url:'https://i.imgflip.com/26jxvz.jpg',tags:['logic','syntax']},
+  {name:'Cheems Bonk',url:'https://i.imgflip.com/43a45p.png',tags:['syntax','general']},
+  {name:'Tom Reading News',url:'https://i.imgflip.com/54d9lj.jpg',tags:['logic','general']},
+  {name:'Arthur Fist',url:'https://i.imgflip.com/1gor4.jpg',tags:['indent','syntax']},
+  {name:'Spongebob Panic',url:'https://i.imgflip.com/3qqcim.gif',tags:['syntax','missing']},
+  {name:'Pedro Pascal Cry Laugh',url:'https://i.imgflip.com/75w3m2.gif',tags:['general','logic']},
+  {name:'Side Eye Cat',url:'https://i.imgflip.com/7h6r98.gif',tags:['typo','general']}
+];
+const baseMediaPool=[...fallbackMemes,...reactionGifs];
+let roastSoundboard={
+  outro:{
+    crowd:[
+      {label:'crowd laugh',url:'/static/coderoast_crowd_laugh.mp3'},
+      {label:'infectious laughter',url:'/static/coderoast-sfx/universfield-very-infectious-laughter-117727.mp3'},
+      {label:'directed by robert b',url:'/static/coderoast-sfx/directed-by-robert-b_voI2Z4T.mp3'},
+      {label:'thud',url:'/static/coderoast-sfx/u_60prvfn0xb-thud-sound-effect-319090.mp3'}
+    ],
+    evil:[
+      {label:'emotional damage',url:'/static/coderoast-sfx/emotional-damage-meme.mp3'},
+      {label:'sinister laugh',url:'/static/coderoast-sfx/universfield-sinister-laugh-140131.mp3'},
+      {label:'bruh',url:'/static/coderoast-sfx/freesound_community-bruh-sound-effect-1-6970.mp3'},
+      {label:'what meme',url:'/static/coderoast-sfx/50986408-what-meme-388653.mp3'},
+      {label:'wait who are you',url:'/static/coderoast-sfx/u_ecyjl18pfk-wait-a-minute-who-are-you-425166.mp3'},
+      {label:'are you out of your mind',url:'/static/coderoast-sfx/are-you-out-of-your-mind-greenscreen-change-quality-and-end-wont-cut-off_2.mp3'},
+      {label:'among us reveal',url:'/static/coderoast-sfx/among-us-role-reveal-sound.mp3'},
+      {label:'sus alarm',url:'/static/coderoast-sfx/shelvis_makes_games-sus-meme-sound-181271.mp3'},
+      {label:'faaah',url:'/static/coderoast-sfx/faaah.mp3'},
+      {label:'fah',url:'/static/coderoast-sfx/johnnybacon156-fah-469417.mp3'},
+      {label:'auughhh',url:'/static/coderoast-sfx/auughhh.mp3'},
+      {label:'tf nemesis',url:'/static/coderoast-sfx/tf_nemesis.mp3'}
+    ],
+    cheer:[
+      {label:'infectious laughter',url:'/static/coderoast-sfx/universfield-very-infectious-laughter-117727.mp3'},
+      {label:'isnt that amazing',url:'/static/coderoast-sfx/roninthebro-isnt-that-amazing-meme-sfx-172488.mp3'},
+      {label:'spiderman meme song',url:'/static/coderoast-sfx/spiderman-meme-song.mp3'},
+      {label:'oh my god',url:'/static/coderoast-sfx/oh-my-god-meme.mp3'}
+    ]
+  }
+};
+const roastSpeechConfig={
+  english:{lang:'en-IN',label:'English (India)'},
+  hindi:{lang:'hi-IN',label:'Hindi'},
+  telugu:{lang:'te-IN',label:'Telugu'}
+};
+const modes={Python:'python',JavaScript:'javascript',Java:'text/x-java','C++':'text/x-c++src'};
+const samples={Python:`def greet(name)\n    print("Hello, " + name)\n\ngreet("World")`,JavaScript:`function total(items){\n  return items.reduce((sum,item)=>sum+item.price,0)\n}\nconsole.log(total(cart))`,Java:`public class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello world")\n  }\n}`,"C++":`#include <iostream>\nusing namespace std;\nint main(){\n  cout << "Hello world" << endl\n  return 0;\n}`};
+const editor=CodeMirror.fromTextArea(document.getElementById('code'),{mode:modes.Python,theme:'material-darker',lineNumbers:true,tabSize:4,indentUnit:4});
+const lang=document.getElementById('lang');
+const roastLang=document.getElementById('roastLang');
+const run=document.getElementById('run');
+const memeImage=document.getElementById('memeImage');
+const mistake=document.getElementById('mistake');
+const sound=document.getElementById('sound');
+const bot=document.getElementById('bot');
+const caps=document.getElementById('caps');
+const out=document.getElementById('out');
+const status=document.getElementById('status');
+const etype=document.getElementById('etype');
+const err=document.getElementById('err');
+const fix=document.getElementById('fix');
+const fixed=document.getElementById('fixed');
+const voiceNote=document.getElementById('voiceNote');
+const voiceStyle=document.getElementById('voiceStyle');
+let timer=null;
+let audioCtx=null;
+let masterGain=null;
+let cachedVoices=[];
+let memePool=[...fallbackMemes,...reactionGifs];
+let pendingLaughTimeout=null;
+let endingPlayer=null;
+let generatedVoicePlayer=null;
+let recentMediaKeys=[];
+let activeMemeKind='general';
+let assetSource='local';
+
+function cookie(name){for(const c of(document.cookie||'').split(';').map(v=>v.trim())) if(c.startsWith(name+'=')) return decodeURIComponent(c.slice(name.length+1)); return ''}
+function loading(on){run.disabled=on;run.classList.toggle('loading',on);run.textContent=on?'roasting':'RUN'}
+function stopTalk(){
+  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  bot.classList.remove('talk');
+  if(timer){clearInterval(timer);timer=null}
+  if(pendingLaughTimeout){clearTimeout(pendingLaughTimeout);pendingLaughTimeout=null}
+  if(endingPlayer){
+    endingPlayer.pause();
+    endingPlayer.currentTime=0;
+  }
+  if(generatedVoicePlayer){
+    generatedVoicePlayer.pause();
+    generatedVoicePlayer.currentTime=0;
+    generatedVoicePlayer.onplay=null;
+    generatedVoicePlayer.onended=null;
+    generatedVoicePlayer.onerror=null;
+  }
+}
+function sanitizeText(text){return String(text||'').replace(/[^\p{L}\p{N}\p{P}\p{Zs}]/gu,'').replace(/\s+/g,' ').trim()}
+function stripSpokenDecorations(text){
+  return String(text||'')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,' ')
+    .replace(/[_*~`]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function lineForMeme(text){const clean=(text||'').replace(/\s+/g,' ').trim();return clean.length>110?clean.slice(0,107)+'...':clean||'the bug folded under pressure'}
+function ensureAudio(){
+  if(!audioCtx){
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(Ctx) audioCtx=new Ctx();
+    if(audioCtx){
+      masterGain=audioCtx.createGain();
+      masterGain.gain.value=.55;
+      masterGain.connect(audioCtx.destination);
+    }
+  }
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
+}
+function unlockAudio(){
+  ensureAudio();
+  if(!endingPlayer){
+    endingPlayer=new Audio(roastSoundboard.outro.crowd[0].url);
+    endingPlayer.preload='auto';
+    endingPlayer.volume=.82;
+  }
+}
+function randomFrom(list=[]){
+  return list[Math.floor(Math.random()*list.length)]||null;
+}
+function clipForOutro(kind='crowd'){
+  const group=roastSoundboard.outro[kind]||roastSoundboard.outro.crowd;
+  return randomFrom(group);
+}
+function playAudioClip(target, clip, volume){
+  if(!clip?.url) return Promise.reject();
+  if(target){
+    target.pause();
+    target.currentTime=0;
+  }
+  const player=new Audio(clip.url);
+  player.preload='auto';
+  player.volume=volume;
+  try{
+    const playback=player.play();
+    return Promise.resolve(playback).then(()=>player);
+  }catch(_error){
+    return Promise.reject();
+  }
+}
+function playCrowdTrack(kind='crowd', chosenClip=null){
+  const clip=chosenClip||clipForOutro(kind);
+  return playAudioClip(endingPlayer, clip, .82).then(player=>{
+    endingPlayer=player;
+    return player;
+  });
+}
+function synthFallback(kind){
+  ensureAudio();
+  if(!audioCtx||!masterGain) return;
+  const now=audioCtx.currentTime+.02;
+  const patterns={
+    syntax:[[520,.00,.12,'square',.5,180],[240,.12,.24,'sawtooth',.42,90]],
+    logic:[[880,.00,.08,'square',.34,620],[320,.09,.24,'triangle',.4,130]],
+    indent:[[980,.00,.05,'triangle',.3,980],[980,.08,.05,'triangle',.3,980],[300,.16,.28,'sine',.4,150]],
+    missing:[[460,.00,.14,'triangle',.36,210],[230,.12,.28,'sawtooth',.46,80]],
+    typo:[[720,.00,.06,'square',.34,520],[900,.07,.06,'square',.32,640],[340,.15,.2,'triangle',.38,180]],
+    general:[[320,.00,.16,'sawtooth',.42,180],[560,.12,.12,'triangle',.34,320],[190,.26,.32,'sine',.48,80]]
+  };
+  const pattern=patterns[kind]||patterns.general;
+  pattern.forEach(([freq,offset,duration,type,gain,slide])=>{
+    const osc=audioCtx.createOscillator();
+    const amp=audioCtx.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,now+offset);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(slide,60),now+offset+duration);
+    amp.gain.setValueAtTime(0.0001,now+offset);
+    amp.gain.exponentialRampToValueAtTime(gain,now+offset+.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001,now+offset+duration);
+    osc.connect(amp).connect(masterGain);
+    osc.start(now+offset);
+    osc.stop(now+offset+duration+.03);
+  });
+}
+function laughFallback(kind){
+  ensureAudio();
+  if(!audioCtx||!masterGain) return;
+  const now=audioCtx.currentTime+.02;
+  const patterns={
+    crowd:[[620,.00,.14,'triangle',.28,760],[710,.08,.14,'triangle',.28,900],[540,.18,.22,'sine',.24,360],[430,.34,.26,'sine',.2,250]],
+    evil:[[260,.00,.24,'sawtooth',.32,210],[340,.15,.22,'triangle',.24,260],[210,.34,.42,'square',.2,120]],
+    cheer:[[520,.00,.12,'triangle',.24,660],[660,.06,.12,'triangle',.24,820],[880,.14,.16,'square',.2,1180],[740,.30,.2,'sine',.18,960]]
+  };
+  (patterns[kind]||patterns.crowd).forEach(([freq,offset,duration,type,gain,slide])=>{
+    const osc=audioCtx.createOscillator();
+    const amp=audioCtx.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,now+offset);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(slide,60),now+offset+duration);
+    amp.gain.setValueAtTime(0.0001,now+offset);
+    amp.gain.exponentialRampToValueAtTime(gain,now+offset+.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001,now+offset+duration);
+    osc.connect(amp).connect(masterGain);
+    osc.start(now+offset);
+    osc.stop(now+offset+duration+.04);
+  });
+  const noiseBursts=kind==='evil'
+    ? [0.03,0.12,0.24,0.38,0.52]
+    : [0.02,0.08,0.14,0.22,0.30,0.40,0.52,0.68,0.82];
+  if(kind==='crowd' || kind==='cheer'){
+    noiseBursts.forEach((offset, index)=>{
+      const noiseBuffer=audioCtx.createBuffer(1, audioCtx.sampleRate * 0.16, audioCtx.sampleRate);
+      const channel=noiseBuffer.getChannelData(0);
+      for(let i=0;i<channel.length;i++) channel[i]=(Math.random()*2-1)*(0.28-(i/channel.length)*0.22);
+      const noise=audioCtx.createBufferSource();
+      const band=audioCtx.createBiquadFilter();
+      const amp=audioCtx.createGain();
+      noise.buffer=noiseBuffer;
+      band.type='bandpass';
+      band.frequency.value=kind==='cheer' ? 1300 + index*110 : 950 + index*70;
+      band.Q.value=0.9;
+      amp.gain.setValueAtTime(0.0001, now+offset);
+      amp.gain.exponentialRampToValueAtTime(kind==='cheer' ? 0.16 : 0.12, now+offset+0.02);
+      amp.gain.exponentialRampToValueAtTime(0.0001, now+offset+0.18);
+      noise.connect(band).connect(amp).connect(masterGain);
+      noise.start(now+offset);
+      noise.stop(now+offset+0.19);
+    });
+  }
+  if(kind==='cheer'){
+    [0.05,0.18,0.32,0.48].forEach((offset, index)=>{
+      const tone=audioCtx.createOscillator();
+      const amp=audioCtx.createGain();
+      tone.type=index % 2 ? 'sawtooth' : 'triangle';
+      tone.frequency.setValueAtTime(420 + index*90, now+offset);
+      tone.frequency.exponentialRampToValueAtTime(760 + index*80, now+offset+0.22);
+      amp.gain.setValueAtTime(0.0001, now+offset);
+      amp.gain.exponentialRampToValueAtTime(0.1, now+offset+0.03);
+      amp.gain.exponentialRampToValueAtTime(0.0001, now+offset+0.24);
+      tone.connect(amp).connect(masterGain);
+      tone.start(now+offset);
+      tone.stop(now+offset+0.26);
+    });
+  }
+}
+function playEndLaugh(kind='crowd'){
+  const clip=clipForOutro(kind);
+  sound.textContent=clip
+    ? `SFX ${clip.label}`
+    :
+    kind==='evil'
+      ? 'SFX evil laugh ending'
+      : kind==='cheer'
+        ? 'SFX crowd cheer ending'
+        : 'SFX crowd laugh ending';
+  if(kind==='cheer'){
+    playCrowdTrack('cheer', clip).catch(()=>laughFallback('cheer'));
+    return;
+  }
+  if(kind==='evil'){
+    playCrowdTrack('evil', clip).catch(()=>{
+      laughFallback('evil');
+      setTimeout(()=>{
+        playCrowdTrack('crowd').catch(()=>laughFallback('crowd'));
+      }, 420);
+    });
+    return;
+  }
+  playCrowdTrack('crowd', clip).catch(()=>laughFallback('crowd'));
+}
+function playGeneratedVoice(ttsPayload, laughKind='crowd'){
+  if(!ttsPayload?.audioSrc) return false;
+  try{
+    generatedVoicePlayer=new Audio(ttsPayload.audioSrc);
+    generatedVoicePlayer.preload='auto';
+    generatedVoicePlayer.volume=1;
+    voiceNote.textContent=`Voice mode: Sarvam ${ttsPayload.speaker||'default'}`;
+    voiceStyle.textContent=`Voice style: ${ttsPayload.model||'server TTS'}`;
+    generatedVoicePlayer.onplay=()=>bot.classList.add('talk');
+    generatedVoicePlayer.onended=()=>{
+      bot.classList.remove('talk');
+      playEndLaugh(laughKind);
+    };
+    generatedVoicePlayer.onerror=()=>{
+      bot.classList.remove('talk');
+      voiceNote.textContent='Voice mode: Sarvam failed, falling back to browser';
+      generatedVoicePlayer=null;
+      speakWithBrowser(caps.dataset.currentRoast||'', laughKind);
+    };
+    generatedVoicePlayer.play().catch(()=>{
+      bot.classList.remove('talk');
+      voiceNote.textContent='Voice mode: Sarvam blocked, falling back to browser';
+      generatedVoicePlayer=null;
+      speakWithBrowser(caps.dataset.currentRoast||'', laughKind);
+    });
+    return true;
+  }catch(_error){
+    generatedVoicePlayer=null;
+    return false;
+  }
+}
+async function loadMemePool(){
+  try{
+    const res=await fetch('https://api.imgflip.com/get_memes?type=gif,image');
+    const data=await res.json();
+    const memes=(data&&data.success&&data.data&&data.data.memes)||[];
+    const usable=memes.filter(m=>m.width>=320&&m.height>=220 && !memeBlockList.some(pattern=>pattern.test(m.name||'')));
+    const hot=usable.filter(m=>hotMemeNames.has(m.name));
+    const lively=(hot.length ? hot : usable.slice(0,90)).map(m=>({name:m.name,url:m.url,tags:inferMemeTags(m.name)}));
+    const mixed=[...reactionGifs,...fallbackMemes,...lively];
+    const deduped=dedupeMedia(mixed);
+    const shuffled=shuffleList(deduped);
+    const filtered=shuffled.slice(0,72);
+    if(filtered.length) memePool=filtered;
+  }catch(_error){
+    memePool=[...fallbackMemes,...reactionGifs];
+  }
+}
+function randomMeme(kind='general'){
+  const themedPool=memePool.filter(item=>item.tags?.includes(kind));
+  const source=themedPool.length ? themedPool : memePool;
+  const freshPool=source.filter(item=>!recentMediaKeys.includes(mediaKey(item)));
+  const selectionPool=freshPool.length ? freshPool : source;
+  const picked=selectionPool[Math.floor(Math.random()*selectionPool.length)]||fallbackMemes[0];
+  if(picked){
+    const key=mediaKey(picked);
+    recentMediaKeys=[key,...recentMediaKeys.filter(entry=>entry!==key)].slice(0,16);
+  }
+  return picked;
+}
+function mediaKey(item){
+  return `${item?.name||'unknown'}::${item?.url||''}`;
+}
+function shuffleList(list){
+  const clone=[...list];
+  for(let i=clone.length-1;i>0;i-=1){
+    const j=Math.floor(Math.random()*(i+1));
+    [clone[i],clone[j]]=[clone[j],clone[i]];
+  }
+  return clone;
+}
+function dedupeMedia(list){
+  const seen=new Set();
+  return list.filter(item=>{
+    const key=mediaKey(item);
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+function sanitizeAssetList(list){
+  if(!Array.isArray(list)) return [];
+  return list
+    .filter(item=>item && item.url && item.name)
+    .map(item=>({
+      name:String(item.name).trim(),
+      url:String(item.url).trim(),
+      tags:Array.isArray(item.tags) && item.tags.length ? item.tags.map(tag=>String(tag).trim().toLowerCase()).filter(Boolean) : ['general']
+    }))
+    .filter(item=>item.name && item.url);
+}
+function sanitizeSoundboard(board){
+  const empty={crowd:[],evil:[],cheer:[]};
+  const outro=board?.outro||{};
+  for(const bucket of Object.keys(empty)){
+    const clips=Array.isArray(outro[bucket]) ? outro[bucket] : [];
+    empty[bucket]=clips
+      .filter(item=>item && item.url && item.label)
+      .map(item=>({label:String(item.label).trim(),url:String(item.url).trim()}))
+      .filter(item=>item.label && item.url);
+  }
+  return {outro:empty};
+}
+async function loadCloudantAssets(){
+  try{
+    const res=await fetch('/coderoast/assets/');
+    if(!res.ok) return false;
+    const data=await res.json();
+    if(!data?.enabled) return false;
+    const cloudMemes=sanitizeAssetList(data.memes);
+    const cloudGifs=sanitizeAssetList(data.gifs);
+    const cloudSoundboard=sanitizeSoundboard(data.soundboard);
+    if(cloudMemes.length) fallbackMemes=cloudMemes;
+    if(cloudGifs.length) reactionGifs=cloudGifs;
+    if(cloudMemes.length || cloudGifs.length){
+      memePool=dedupeMedia([...fallbackMemes,...reactionGifs]);
+    }
+    if(cloudSoundboard.outro.crowd.length || cloudSoundboard.outro.evil.length || cloudSoundboard.outro.cheer.length){
+      roastSoundboard=cloudSoundboard;
+    }
+    assetSource=data.source||'cloudant';
+    sound.textContent=`SFX source: ${assetSource}`;
+    return true;
+  }catch(_error){
+    return false;
+  }
+}
+function inferMemeTags(name=''){
+  const sample=String(name).toLowerCase();
+  const tags=new Set(['general']);
+  if(/(surprised|shocked|who|skeptical|confused|pigeon|same picture|monkey puppet|awkward|tom|cat)/.test(sample)) tags.add('logic');
+  if(/(spongebob|mocking|facepalm|arthur|bonk|fine|button|boardroom|panic|harold)/.test(sample)) tags.add('syntax');
+  if(/(skeleton|waiting|pablo|crying|where|missing|padme|squidward|door)/.test(sample)) tags.add('missing');
+  if(/(patrick|fist|draw 25|button|handshake|x everywhere|off ramp)/.test(sample)) tags.add('indent');
+  if(/(driving|side eye|mocking|pigeon|wrong|change my mind|skeptical)/.test(sample)) tags.add('typo');
+  if(/(handshake|jackpot|thumbs up|oscars|great|victory|cheer)/.test(sample)) tags.add('success');
+  return [...tags];
+}
+function swapMeme(kind='general', attempts=0){
+  const meme=randomMeme(kind||'general');
+  memeImage.onerror=null;
+  memeImage.onload=()=>{memeImage.dataset.loaded='true';};
+  memeImage.onerror=()=>{
+    if(attempts >= 4){
+      const safeFallback=fallbackMemes.find(item=>item.tags.includes(kind))||fallbackMemes[0];
+      memeImage.onerror=null;
+      memeImage.src=safeFallback.url;
+      memeImage.alt=safeFallback.name;
+      return;
+    }
+    swapMeme(kind, attempts + 1);
+  };
+  memeImage.dataset.loaded='false';
+  memeImage.src=meme.url;
+  memeImage.alt=meme.name;
+}
+function showMeme(kind,line){
+  const theme=memeThemes[kind]||memeThemes.general;
+  activeMemeKind=kind||'general';
+  swapMeme(activeMemeKind);
+  mistake.textContent=line||'The AI returned no mistake line.';
+  sound.textContent=`SFX standby: ${theme.sound}`;
+  voiceStyle.textContent=`Voice style: ${theme.style}`;
+  bot.dataset.mood=kind||'general';
+}
+function captions(text){
+  const words=text.trim().split(/\s+/).filter(Boolean);
+  caps.dataset.currentRoast=text;
+  caps.innerHTML=words.map(w=>`<span class="word">${w.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</span>`).join('');
+  const nodes=[...caps.querySelectorAll('.word')];
+  let i=0;
+  timer=setInterval(()=>{
+    nodes.forEach((n,x)=>{n.classList.toggle('done',x<i);n.classList.toggle('now',x===i)});
+    i++;
+    if(i>nodes.length){
+      clearInterval(timer);
+      timer=null;
+      nodes.forEach(n=>{n.classList.remove('now');n.classList.add('done')});
+    }
+  },140);
+}
+function loadVoices(){
+  cachedVoices=window.speechSynthesis?.getVoices?.()||[];
+  updateVoiceStatus();
+}
+function findPreferredVoice(matchers=[]){
+  const englishVoices=cachedVoices.filter(v=>/en/i.test(v.lang));
+  for(const matcher of matchers){
+    const match=englishVoices.find(v=>matcher.test(`${v.name} ${v.lang}`));
+    if(match) return match;
+  }
+  return null;
+}
+function findPreferredVoiceAny(voices, matchers=[]){
+  for(const matcher of matchers){
+    const match=voices.find(v=>matcher.test(`${v.name} ${v.lang}`));
+    if(match) return match;
+  }
+  return null;
+}
+function findVoiceByScore(voices, rules=[]){
+  let best=null;
+  let bestScore=-1;
+  for(const voice of voices){
+    const sample=`${voice.name} ${voice.lang}`;
+    let score=0;
+    for(const rule of rules){
+      if(rule.pattern.test(sample)) score+=rule.weight;
+    }
+    if(score>bestScore){
+      best=voice;
+      bestScore=score;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+function selectedSpeechConfig(){
+  return roastSpeechConfig[roastLang?.value||'english']||roastSpeechConfig.english;
+}
+function hasLanguageVoice(langCode){
+  return cachedVoices.some(v=>new RegExp(`^${langCode.split('-')[0]}([-_]|$)`,'i').test(v.lang));
+}
+function updateVoiceStatus(){
+  const picked=pickVoice();
+  const selectedRoastLanguage=roastLang?.value||'english';
+  const speechConfig=selectedSpeechConfig();
+  if(picked){
+    voiceNote.textContent=`Voice mode: ${picked.name}`;
+    return;
+  }
+  if(selectedRoastLanguage==='english'){
+    voiceNote.textContent='Voice mode: browser English (India) fallback';
+    return;
+  }
+  voiceNote.textContent=`Voice mode: no ${speechConfig.label} voice installed in browser`;
+}
+function pickVoice(){
+  if(!cachedVoices.length) return null;
+  const selectedRoastLanguage=roastLang?.value||'english';
+  if(selectedRoastLanguage==='hindi'){
+    const hindiVoices=cachedVoices.filter(v=>/^hi([-_]|$)/i.test(v.lang) || /Hindi|hi-IN|hi_IN|India/i.test(`${v.name} ${v.lang}`));
+    const maleHindi=findPreferredVoiceAny(hindiVoices, [/male|prabhat|aditya|hemant|arjun/i, /India|Hindi/i]);
+    if(maleHindi) return maleHindi;
+    if(hindiVoices[0]) return hindiVoices[0];
+    return null;
+  }
+  if(selectedRoastLanguage==='telugu'){
+    const teluguVoices=cachedVoices.filter(v=>/^te([-_]|$)/i.test(v.lang) || /Telugu|te-IN|te_IN|India/i.test(`${v.name} ${v.lang}`));
+    const maleTelugu=findPreferredVoiceAny(teluguVoices, [/male|telugu|India|Ravi|Kumar|Sai/i]);
+    if(maleTelugu) return maleTelugu;
+    if(teluguVoices[0]) return teluguVoices[0];
+    return null;
+  }
+  const englishVoices=cachedVoices.filter(v=>/en/i.test(v.lang));
+  const indianMaleEnglish=findVoiceByScore(englishVoices,[
+    {pattern:/en[-_]IN|India|Indian/i,weight:8},
+    {pattern:/male|guy|david|mark|prabhat|aaron|nathan|tom|lee|bruce|ryan|daniel|alex/i,weight:5},
+    {pattern:/natural|premium|enhanced/i,weight:2}
+  ]);
+  if(indianMaleEnglish) return indianMaleEnglish;
+  const indianEnglish=findVoiceByScore(englishVoices,[
+    {pattern:/en[-_]IN|India|Indian/i,weight:7},
+    {pattern:/female|heera|aria|jenny|sonia|samantha|karen/i,weight:1}
+  ]);
+  if(indianEnglish) return indianEnglish;
+  const maleEnglish=findVoiceByScore(englishVoices,[
+    {pattern:/male|guy|david|mark|aaron|nathan|tom|lee|bruce|ryan|daniel|alex/i,weight:5},
+    {pattern:/en[-_]GB|en[-_]US/i,weight:2},
+    {pattern:/natural|premium|enhanced/i,weight:1}
+  ]);
+  if(maleEnglish) return maleEnglish;
+  return cachedVoices.find(v=>/en/i.test(v.lang))||cachedVoices[0]||null;
+}
+function styleForSpeech(text){
+  const selectedRoastLanguage=roastLang?.value||'english';
+  const cleanedBase=stripSpokenDecorations(text);
+  if(selectedRoastLanguage==='hindi' || selectedRoastLanguage==='telugu'){
+    return cleanedBase.replace(/\s+/g,' ').trim();
+  }
+  let spoken=sanitizeText(cleanedBase)
+    .replace(/AI/g,'A I')
+    .replace(/\s*([,.!?])\s*/g,'$1 ')
+    .trim();
+  spoken=spoken
+    .replace(/seriously/gi,'seriously...')
+    .replace(/nah/gi,'no...')
+    .replace(/cooked/gi,'fully broken')
+    .replace(/wild/gi,'messy...')
+    .replace(/oh,?\s+/gi,'oh... ')
+    .replace(/wow,?\s+/gi,'wow... ')
+    .replace(/sweetie/gi,'arre yaar...')
+    .replace(/buddy/gi,'bhai...')
+    .replace(/\s+/g,' ')
+    .trim();
+  if(!/[.!?]$/.test(spoken)) spoken+='.';
+  spoken=spoken.replace(/, /g, ', ... ');
+  return spoken;
+}
+function voiceProfile(text){
+  const cleaned=text.trim();
+  if(/[!?]{2,}/.test(cleaned)) return {rate:.92,pitch:.72,style:'extra dramatic'};
+  if(/(no way|bro|bhai|yaar|arre|nah|cooked|wild|seriously)/i.test(cleaned)) return {rate:.88,pitch:.68,style:'mocking disbelief'};
+  if(/(oh|wow|sweetie|buddy|miracle|embarrassing|scene)/i.test(cleaned)) return {rate:.86,pitch:.66,style:'smug roast'};
+  return {rate:.9,pitch:.7,style:'dry sarcasm'};
+}
+function speakWithBrowser(text, laughKind='crowd'){
+  if(!('speechSynthesis' in window)){
+    bot.classList.add('talk');
+    voiceNote.textContent='Voice mode: browser speech API unavailable';
+    pendingLaughTimeout=setTimeout(()=>{
+      bot.classList.remove('talk');
+      playEndLaugh(laughKind);
+    },2400);
+    return;
+  }
+  loadVoices();
+  const selectedRoastLanguage=roastLang?.value||'english';
+  const speechConfig=selectedSpeechConfig();
+  if(selectedRoastLanguage!=='english' && !hasLanguageVoice(speechConfig.lang)){
+    voiceNote.textContent=`Voice mode: no ${speechConfig.label} voice installed in browser`;
+    voiceStyle.textContent='Voice style: text only';
+    playEndLaugh(laughKind);
+    return;
+  }
+  const spokenText=styleForSpeech(text);
+  const parts=spokenText
+    .split(/(?<=[.!?])\s+/)
+    .flatMap(part=>part.split(/,\s*\.\.\.\s*/))
+    .map(part=>part.trim())
+    .filter(Boolean);
+  const voice=pickVoice();
+  updateVoiceStatus();
+  let index=0;
+  const talkNext=()=>{
+    if(index>=parts.length){
+      bot.classList.remove('talk');
+      playEndLaugh(laughKind);
+      return;
+    }
+    const current=parts[index];
+    const profile=voiceProfile(current);
+    voiceStyle.textContent=`Voice style: ${profile.style}`;
+    const utterance=new SpeechSynthesisUtterance(current);
+    utterance.rate=profile.rate;
+    utterance.pitch=profile.pitch;
+    utterance.volume=1;
+    utterance.lang=(voice&&voice.lang)||speechConfig.lang;
+    if(voice) utterance.voice=voice;
+    utterance.onstart=()=>bot.classList.add('talk');
+    utterance.onerror=()=>bot.classList.remove('talk');
+    utterance.onend=()=>{
+      index+=1;
+      setTimeout(talkNext, index < parts.length ? 120 : 0);
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+  talkNext();
+}
+function speak(text, laughKind='crowd', ttsPayload=null){
+  stopTalk();
+  captions(text);
+  if(ttsPayload && playGeneratedVoice(ttsPayload, laughKind)) return;
+  speakWithBrowser(text, laughKind);
+}
+function render(r){
+  const bad=!!r.hasError;
+  out.className='out '+(bad?'error':'success');
+  status.textContent=bad?'Error detected':'Roast complete with no critical errors';
+  etype.textContent=(r.errorType||'general').toUpperCase();
+  err.textContent=r.errorMessage||'No error message supplied.';
+  fix.textContent=r.fix||'No fix suggestion supplied.';
+  fixed.textContent=r.fixCode||'// No corrected snippet yet. Your current code is still shown in the editor.';
+  if(!bad) bot.dataset.mood='success';
+}
+lang.addEventListener('change',()=>{
+  editor.setOption('mode',modes[lang.value]||'python');
+  editor.setValue(samples[lang.value]||'');
+});
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged=loadVoices;
+  loadVoices();
+}
+roastLang.addEventListener('change', loadVoices);
+window.addEventListener('pointerdown', unlockAudio, {once:true});
+window.addEventListener('keydown', unlockAudio, {once:true});
+loadCloudantAssets().finally(loadMemePool);
+showMeme('general','Your meme panel is waiting for the first bug to embarrass itself.');
+run.addEventListener('click',async()=>{
+  stopTalk();
+  unlockAudio();
+  loading(true);
+  status.textContent='Calling the roast engine';
+  etype.textContent='LOADING';
+  err.textContent='Gemini is checking the snippet and preparing the roast...';
+  fix.textContent='Waiting for the backend response.';
+  fixed.textContent='// roast incoming';
+  try{
+    const res=await fetch('/coderoast/roast/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':cookie('csrftoken')},
+      body:JSON.stringify({code:editor.getValue(),language:lang.value,roastLanguage:roastLang.value})
+    });
+    const raw=await res.text();
+    let data;
+    try{
+      data=JSON.parse(raw);
+    }catch(_parseError){
+      throw new Error(`Unexpected ${res.status} response from Django.`);
+    }
+    showMeme(data.errorType||'general',data.mistakeLine||'The AI returned no mistake line.');
+    render(data);
+    setTimeout(()=>speak(data.roast||'That code got away this time.', data.hasError ? 'evil' : 'cheer', data.tts||null),380);
+  }catch(error){
+    const data={
+      hasError:true,
+      errorType:'general',
+      errorMessage:'Friendly local error: the roast request failed.',
+      mistakeLine:error?.message||'The browser could not reach the Django roast endpoint.',
+      roast:'The robot showed up, saw a network problem, and blamed the cables.',
+      fix:'Confirm the Django server is running and the Gemini credentials are valid.',
+      fixCode:editor.getValue()
+    };
+    showMeme(data.errorType,data.mistakeLine);
+    render(data);
+    setTimeout(()=>speak(data.roast,'evil', null),380);
+  }finally{
+    loading(false);
+  }
+});
+</script>
+</body>
+</html>

@@ -502,6 +502,8 @@ ul {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
+  position: relative;
 }
 
 .nav-logo img {
@@ -517,13 +519,25 @@ ul {
   display: none;
   align-items: center;
   gap: 0.25rem;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
 }
 
 @media (min-width: 768px) {
   .nav-links { display: flex; }
+}
+
+.nav-actions {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .nav-actions { display: flex; }
 }
 
 .nav-link {
@@ -562,31 +576,33 @@ ul {
   transform: translateY(-2px);
 }
 
-.nav-cta {
+.nav-auth {
   display: none;
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1.5rem;
   border-radius: 9999px;
-  border: 1px solid hsl(var(--sklint-purple) / 0.5);
+  border-color: hsl(var(--sklint-blue) / 0.45);
+  border: 1px solid hsl(var(--sklint-blue) / 0.45);
   font-size: 0.875rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: all 0.3s ease;
   color: hsl(var(--foreground));
+  white-space: nowrap;
 }
 
 @media (min-width: 768px) {
-  .nav-cta { display: flex; }
+  .nav-auth { display: flex; }
 }
 
-.nav-cta:hover {
-  background: hsl(var(--sklint-purple) / 0.2);
-  border-color: hsl(var(--sklint-purple) / 0.8);
-  box-shadow: 0 0 20px hsl(278 53% 30% / 0.3);
+.nav-auth:hover {
+  background: hsl(var(--sklint-blue) / 0.16);
+  border-color: hsl(var(--sklint-blue) / 0.8);
+  box-shadow: 0 0 20px hsl(212 90% 55% / 0.24);
 }
 
-.nav-cta .arrow {
+.nav-auth .arrow {
   display: inline-block;
   animation: arrowBounce 1.5s ease-in-out infinite;
 }
@@ -684,6 +700,34 @@ ul {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-family: 'Inter', sans-serif;
+}
+
+.flash-messages {
+  position: relative;
+  z-index: 35;
+  padding: 1rem 0 0;
+}
+
+.flash-message {
+  margin: 0 auto 0.75rem;
+  max-width: 1280px;
+  padding: 0.875rem 1rem;
+  border: 1px solid hsl(0 0% 100% / 0.1);
+  border-radius: 1rem;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, hsl(244 38% 14% / 0.92), hsl(249 58% 10% / 0.86));
+  color: hsl(var(--foreground));
+  box-shadow: 0 18px 40px hsl(249 58% 4% / 0.22);
+}
+
+.flash-message-success {
+  border-color: hsl(145 55% 55% / 0.35);
+  background: linear-gradient(135deg, hsl(155 44% 16% / 0.92), hsl(165 54% 10% / 0.86));
+}
+
+.flash-message-error {
+  border-color: hsl(0 78% 62% / 0.4);
+  background: linear-gradient(135deg, hsl(352 55% 18% / 0.92), hsl(0 52% 11% / 0.86));
 }
 
 /* ========== Hero Section ========== */
@@ -3046,6 +3090,46 @@ ul {
 
 .not-found a:hover {
   color: hsl(var(--primary) / 0.9);
+}
+
+/* Error Page with Memes */
+.not-found .error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.error-meme {
+  max-width: 320px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px hsl(var(--sklint-purple) / 0.15);
+  animation: meme-fade-in 0.6s ease-out;
+}
+
+.error-meme img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes meme-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (min-width: 768px) {
+  .error-meme {
+    max-width: 400px;
+  }
 }
 
 /* ========== Toast Notification ========== */

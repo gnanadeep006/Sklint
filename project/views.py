@@ -1,6 +1,9 @@
+import random
+
 from django.shortcuts import render
 
 from clints.models import FeaturedProject
+from project.appid import appid_callback, appid_login, appid_logout
 
 
 DEFAULT_FEATURED_PROJECTS = [
@@ -106,5 +109,45 @@ def projects(request):
     )
 
 
+# Memes organized by error type
+ERROR_MEMES = {
+    '404': [
+        {'type': 'image', 'url': 'https://http.cat/404', 'alt': 'Cat in box'},
+        {'type': 'image', 'url': 'https://httpstatus.io/404-cat.png', 'alt': 'Lost cat'},
+        {'type': 'gif', 'url': 'https://media.giphy.com/media/8Lh18E4Ar3zZ2/giphy.gif', 'alt': 'Confused cat'},
+        {'type': 'image', 'url': 'https://http.cat/404', 'alt': '404 cat'},
+    ],
+    '500': [
+        {'type': 'image', 'url': 'https://http.cat/500', 'alt': 'Cat on fire'},
+        {'type': 'gif', 'url': 'https://media.giphy.com/media/l378giAZgxPw3eO52/giphy.gif', 'alt': 'Panic cat'},
+        {'type': 'image', 'url': 'https://http.cat/500', 'alt': 'Server cat'},
+    ],
+    '403': [
+        {'type': 'image', 'url': 'https://http.cat/403', 'alt': 'Cat blocking'},
+        {'type': 'gif', 'url': 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif', 'alt': 'No cat'},
+        {'type': 'image', 'url': 'https://http.cat/403', 'alt': 'Forbidden cat'},
+    ],
+    'default': [
+        {'type': 'image', 'url': 'https://http.cat/400', 'alt': 'Cat confused'},
+        {'type': 'gif', 'url': 'https://media.giphy.com/media/MDJDe4K7n5X7W/giphy.gif', 'alt': 'Sad cat'},
+        {'type': 'image', 'url': 'https://http.cat/418', 'alt': 'Teapot cat'},
+        {'type': 'gif', 'url': 'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif', 'alt': 'Shocked cat'},
+    ],
+}
+
+
 def error(request):
-    return render(request, 'error.html')
+    # Get error code from query params or default to 404
+    error_code = request.GET.get('code', '404')
+    
+    # Get memes for this error type, fallback to default
+    memes = ERROR_MEMES.get(str(error_code), ERROR_MEMES.get('default', ERROR_MEMES['default']))
+    
+    # Shuffle and pick a random meme
+    random.shuffle(memes)
+    selected_meme = memes[0]
+    
+    return render(request, 'error.html', {
+        'error_code': error_code,
+        'meme': selected_meme,
+    })

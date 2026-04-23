@@ -19,29 +19,30 @@
         <img src="{% static 'Nav logo.png' %}" alt="SklinT" />
       </a>
       <ul class="nav-links">
-        <li><a href="{% url 'home' %}" class="nav-link"><span>Home</span></a></li>
         <li><a href="{% url 'projects' %}" class="nav-link"><span>Projects</span></a></li>
+        <li><a href="{% url 'coderoast:index' %}" class="nav-link"><span>CodeGuilt Ai</span></a></li>
         <li><a href="{% url 'about' %}" class="nav-link"><span>About</span></a></li>
-              </ul>
-      <a href="{% url 'contact' %}" class="nav-cta">
-        <span>Work With Us</span>
-        <span class="arrow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </span>
-      </a>
+        <li><a href="{% url 'contact' %}" class="nav-link"><span>Work With Us</span></a></li>
+      </ul>
+      <div class="nav-actions">
+        {% include 'includes/auth_nav.html' %}
+      </div>
       <button class="mobile-menu-btn" aria-label="Toggle menu">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
       </button>
     </nav>
   </header>
 
+  {% include 'includes/flash_messages.html' %}
+
   <!-- Mobile Menu -->
   <div class="mobile-menu">
     <div class="mobile-menu-bg mesh-gradient"></div>
-    <a href="{% url 'home' %}">Home</a>
     <a href="{% url 'projects' %}">Projects</a>
+    <a href="{% url 'coderoast:index' %}">CodeGuilt Ai</a>
     <a href="{% url 'about' %}">About</a>
-        <a href="{% url 'contact' %}" class="mobile-cta">Work With Us</a>
+    <a href="{% url 'contact' %}">Work With Us</a>
+    {% include 'includes/auth_mobile.html' %}
   </div>
 
   <main>
@@ -103,8 +104,8 @@
               <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
             </span>
           </a>
-          <a href="{% url 'about' %}" class="btn-outline">
-            <span style="position:relative;z-index:1;">About Us</span>
+          <a href="{% url 'coderoast:index' %}" class="btn-outline">
+            <span style="position:relative;z-index:1;">Try CodeGuilt Ai</span>
           </a>
         </div>
       </div>
@@ -318,6 +319,7 @@
             <nav>
               <a href="{% url 'home' %}" class="link-underline">Home</a>
               <a href="{% url 'projects' %}" class="link-underline">Projects</a>
+              <a href="{% url 'coderoast:index' %}" class="link-underline">CodeGuilt Ai</a>
               <a href="{% url 'about' %}" class="link-underline">About</a>
               <a href="{% url 'contact' %}" class="link-underline">Contact</a>
             </nav>
@@ -349,6 +351,7 @@
   <script src="{% static 'main.js' %}"></script>
 </body>
 </html>
+
 
 
 
