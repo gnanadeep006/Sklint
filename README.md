@@ -78,6 +78,9 @@ Example SFX buckets:
 - `evil`
 - `cheer`
 
+### Sarvam AI
+Sarvam AI is used here as an optional text-to-speech provider for CodeGuilt roast playback. When configured, the backend can return generated roast audio; otherwise the project falls back to browser-based voice playback.
+
 ## CodeGuilt Notes
 - The roast flow uses Gemini with configured fallback model candidates.
 - The frontend rotates memes/gifs and supports browser speech with optional server TTS.
