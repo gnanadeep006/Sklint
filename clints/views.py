@@ -11,7 +11,6 @@ DEFAULT_BUDGET_OPTIONS = [
     {"value": "50k+", "label": "Rs50,000+"},
 ]
 CUSTOM_BUDGET_OPTION = {"value": "custom", "label": "Custom range"}
-
 DEFAULT_STEPS = [
     "We'll review your message and research your space.",
     "We'll schedule a brief discovery call to understand your needs.",
@@ -19,16 +18,28 @@ DEFAULT_STEPS = [
 ]
 
 
+def _budget_options():
+    options = list(BudgetOption.objects.values("value", "label")) or DEFAULT_BUDGET_OPTIONS.copy()
+    if not any(option.get("value") == CUSTOM_BUDGET_OPTION["value"] for option in options):
+        options.append(CUSTOM_BUDGET_OPTION.copy())
+    return options
+
+
+def _contact_steps():
+    return list(ContactStep.objects.values_list("text", flat=True)) or DEFAULT_STEPS.copy()
+
+
+def _contact_context(form, *, submitted):
+    return {
+        "content": ContactPageContent.objects.first(),
+        "form": form,
+        "budget_options": _budget_options(),
+        "steps": _contact_steps(),
+        "submitted": submitted,
+    }
+
+
 def contact(request):
-    content = ContactPageContent.objects.first()
-    budget_qs = BudgetOption.objects.all()
-    step_qs = ContactStep.objects.all()
-
-    budget_options = list(budget_qs.values("value", "label")) or DEFAULT_BUDGET_OPTIONS
-    if not any(option.get("value") == "custom" for option in budget_options):
-        budget_options.append(CUSTOM_BUDGET_OPTION)
-    steps = list(step_qs.values_list("text", flat=True)) or DEFAULT_STEPS
-
     if request.method == "POST":
         form = ContactSubmissionForm(request.POST)
         if form.is_valid():
@@ -40,11 +51,5 @@ def contact(request):
     return render(
         request,
         "contact.html",
-        {
-            "content": content,
-            "form": form,
-            "budget_options": budget_options,
-            "steps": steps,
-            "submitted": request.GET.get("submitted") == "1",
-        },
+        _contact_context(form, submitted=request.GET.get("submitted") == "1"),
     )

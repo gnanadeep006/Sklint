@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sklint
+    env: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn project.wsgi:application
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: RENDER_EXTERNAL_HOSTNAME
+        fromService:
+          type: web
+          name: sklint
+          property: host

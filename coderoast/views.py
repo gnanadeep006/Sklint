@@ -1,11 +1,9 @@
 import json
-import os
 import re
 import time
 from base64 import b64decode, b64encode
-from pathlib import Path
-from urllib.parse import quote
 from urllib import error, request
+from urllib.parse import quote
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -21,6 +19,11 @@ GEMINI_API_URL = (
 SARVAM_TTS_API_URL = "https://api.sarvam.ai/text-to-speech"
 ERROR_TYPES = {"syntax", "logic", "indent", "missing", "typo", "general"}
 RETRYABLE_STATUS_CODES = {429, 503}
+DEFAULT_GEMINI_FALLBACK_MODELS = (
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+)
 ROAST_LANGUAGE_RULES = {
     "english": {
         "label": "English (India)",
@@ -39,12 +42,11 @@ ROAST_LANGUAGE_RULES = {
     "telugu": {
         "label": "Telugu",
         "instruction": (
-            "Write all user-facing text in simple natural Telugu using తెలుగు script. "
+            "Write all user-facing text in simple natural Telugu using Telugu script. "
             "Keep code, variable names, symbols, and fixCode unchanged."
         ),
     },
 }
-
 DEFAULT_RESPONSE = {
     "hasError": True,
     "errorType": "general",
@@ -67,17 +69,23 @@ def index(request):
 
 
 def _corsify(response):
-    origin = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else "*"
+    allowed_origins = settings.CORS_ALLOWED_ORIGINS or []
+    origin = allowed_origins[0] if allowed_origins else "*"
     response["Access-Control-Allow-Origin"] = origin
     response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
     response["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken"
     return response
 
 
+def _json_response(payload, status=200):
+    return _corsify(JsonResponse(payload, status=status))
+
+
 def _normalize_payload(payload):
     normalized = DEFAULT_RESPONSE.copy()
     normalized.update({key: payload.get(key, value) for key, value in DEFAULT_RESPONSE.items()})
     normalized["hasError"] = bool(normalized.get("hasError"))
+
     error_type = str(normalized.get("errorType", "general")).lower()
     normalized["errorType"] = error_type if error_type in ERROR_TYPES else "general"
 
@@ -87,13 +95,26 @@ def _normalize_payload(payload):
     return normalized
 
 
+def _error_response(message, mistake_line, fix, *, status, roast=None, fix_code=None):
+    payload = {
+        "errorMessage": message,
+        "mistakeLine": mistake_line,
+        "fix": fix,
+    }
+    if roast:
+        payload["roast"] = roast
+    if fix_code is not None:
+        payload["fixCode"] = fix_code
+    return _json_response(_normalize_payload(payload), status=status)
+
+
 def _extract_text(response_data):
     candidates = response_data.get("candidates") or []
     if not candidates:
         raise ValueError("No candidates returned by Gemini.")
+
     parts = candidates[0].get("content", {}).get("parts", [])
-    text_chunks = [part.get("text", "") for part in parts if isinstance(part, dict)]
-    combined = "".join(text_chunks).strip()
+    combined = "".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip()
     if not combined:
         raise ValueError("Gemini returned an empty response body.")
     return combined
@@ -124,7 +145,6 @@ def _build_http_error_payload(exc):
         "fix": "Verify the API key, model name, and billing or provider access, then try again.",
         "roast": "The roast bot got bounced at the door before it could even insult the code.",
     }
-    details = ""
     try:
         details = exc.read().decode("utf-8", errors="replace")
     except Exception:
@@ -151,7 +171,6 @@ def _build_http_error_payload(exc):
         )
     elif exc.code == 404 or "not found for api version" in lowered or "not supported for generatecontent" in lowered:
         attempted_models = getattr(exc, "models_tried", []) or []
-        attempted_models_text = ", ".join(attempted_models)
         payload.update(
             {
                 "errorMessage": "Gemini model configuration failed.",
@@ -162,10 +181,10 @@ def _build_http_error_payload(exc):
                 ),
             }
         )
-        if attempted_models_text:
+        if attempted_models:
             payload["mistakeLine"] = (
                 "The Gemini API rejected every configured model candidate: "
-                f"{attempted_models_text}."
+                f"{', '.join(attempted_models)}."
             )
     elif exc.code in {401, 403} or "api key" in lowered or "permission" in lowered:
         payload.update(
@@ -182,10 +201,10 @@ def _build_http_error_payload(exc):
 
 
 def _build_prompt(code, language, roast_language):
-    roast_language_config = ROAST_LANGUAGE_RULES.get(roast_language, ROAST_LANGUAGE_RULES["english"])
+    language_config = ROAST_LANGUAGE_RULES.get(roast_language, ROAST_LANGUAGE_RULES["english"])
     return f"""
 You are CodeRoast AI, a funny senior code reviewer.
-{roast_language_config["instruction"]}
+{language_config["instruction"]}
 
 Analyze the following {language} code. Return ONLY valid JSON with these exact fields:
 {{
@@ -202,7 +221,7 @@ Rules:
 - Return JSON only. No markdown fences. No explanation outside JSON.
 - If the code looks correct, set hasError to false, errorType to "general", errorMessage to "No critical errors detected", and still provide a playful roast plus a small improvement in fix/fixCode.
 - Use short, simple sentences and common words.
-- The requested roast language is {roast_language_config["label"]}.
+- The requested roast language is {language_config["label"]}.
 - If the requested roast language is Hindi, write errorMessage, mistakeLine, roast, and fix in clear Hindi.
 - If the requested roast language is Telugu, write errorMessage, mistakeLine, roast, and fix in clear Telugu.
 - If the requested roast language is English, prefer clear Indian English style over slang-heavy US internet English.
@@ -225,8 +244,7 @@ Rules:
 - Do not use vague roast lines. Bad example: "This code is broken 😂"
 - Good roast style example: "You wrote `print(username)` after creating `user_name`. Even your variable is not ready to meet itself 😂"
 - Good roast style example: "`def greet(name)` is standing without `:` like it forgot the entry ticket. Python rejected it at the door 🔥"
-
-- Good Indian English roast example: "Bhai, `total = price * qty` likha and then returned `totals`. Yaar, even the variable gave up before runtime finished roasting you ðŸ’€"
+- Good Indian English roast example: "Bhai, `total = price * qty` likha and then returned `totals`. Yaar, even the variable gave up before runtime finished roasting you 💀"
 
 Code:
 ```{language.lower()}
@@ -235,57 +253,13 @@ Code:
 """.strip()
 
 
-def _strip_env_value(value):
-    value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
-        return value[1:-1]
-    return value
-
-
-def _load_env_values():
-    env_values = {}
-    env_path = Path(settings.BASE_DIR) / ".env"
-    if env_path.exists():
-        for line in env_path.read_text(encoding="utf-8-sig").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            env_values[key.strip()] = _strip_env_value(value)
-    return env_values
-
-
 def _current_gemini_config():
-    env_values = _load_env_values()
-    api_key = (
-        os.environ.get("GOOGLE_AI_STUDIO_API_KEY")
-        or env_values.get("GOOGLE_AI_STUDIO_API_KEY")
-        or os.environ.get("GEMINI_API_KEY")
-        or env_values.get("GEMINI_API_KEY")
-        or settings.GOOGLE_AI_STUDIO_API_KEY
-    )
-    model = (
-        os.environ.get("CODEROAST_GEMINI_MODEL")
-        or env_values.get("CODEROAST_GEMINI_MODEL")
-        or os.environ.get("GOOGLE_AI_MODEL")
-        or env_values.get("GOOGLE_AI_MODEL")
-        or settings.GOOGLE_AI_MODEL
-    )
-    return api_key, model
+    return settings.GOOGLE_AI_STUDIO_API_KEY, settings.GOOGLE_AI_MODEL
 
 
 def _candidate_gemini_models(primary_model):
-    env_values = _load_env_values()
-    raw_fallbacks = (
-        os.environ.get("CODEROAST_GEMINI_FALLBACK_MODELS")
-        or env_values.get("CODEROAST_GEMINI_FALLBACK_MODELS")
-        or os.environ.get("GOOGLE_AI_FALLBACK_MODELS")
-        or env_values.get("GOOGLE_AI_FALLBACK_MODELS")
-        or ""
-    )
-    configured_fallbacks = [item.strip() for item in raw_fallbacks.split(",") if item.strip()]
-    default_fallbacks = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"]
-    ordered_models = [primary_model, *configured_fallbacks, *default_fallbacks]
+    configured_fallbacks = list(getattr(settings, "CODEROAST_GEMINI_FALLBACK_MODELS", ()) or ())
+    ordered_models = [primary_model, *configured_fallbacks, *DEFAULT_GEMINI_FALLBACK_MODELS]
     unique_models = []
     for model_name in ordered_models:
         if model_name and model_name not in unique_models:
@@ -294,113 +268,48 @@ def _candidate_gemini_models(primary_model):
 
 
 def _current_sarvam_config():
-    env_values = _load_env_values()
-    provider = (
-        os.environ.get("CODEROAST_TTS_PROVIDER")
-        or env_values.get("CODEROAST_TTS_PROVIDER")
-        or settings.CODEROAST_TTS_PROVIDER
-        or "browser"
-    ).strip().lower()
-    api_key = (
-        os.environ.get("SARVAM_API_KEY")
-        or env_values.get("SARVAM_API_KEY")
-        or settings.SARVAM_API_KEY
-    )
-    model = (
-        os.environ.get("SARVAM_TTS_MODEL")
-        or env_values.get("SARVAM_TTS_MODEL")
-        or settings.SARVAM_TTS_MODEL
-        or "bulbul:v3"
-    )
-    audio_codec = (
-        os.environ.get("SARVAM_TTS_AUDIO_CODEC")
-        or env_values.get("SARVAM_TTS_AUDIO_CODEC")
-        or settings.SARVAM_TTS_AUDIO_CODEC
-        or "mp3"
-    ).strip().lower()
-    speakers = {
-        "english": (
-            os.environ.get("SARVAM_TTS_ENGLISH_SPEAKER")
-            or env_values.get("SARVAM_TTS_ENGLISH_SPEAKER")
-            or settings.SARVAM_TTS_ENGLISH_SPEAKER
-        ).strip(),
-        "hindi": (
-            os.environ.get("SARVAM_TTS_HINDI_SPEAKER")
-            or env_values.get("SARVAM_TTS_HINDI_SPEAKER")
-            or settings.SARVAM_TTS_HINDI_SPEAKER
-        ).strip(),
-        "telugu": (
-            os.environ.get("SARVAM_TTS_TELUGU_SPEAKER")
-            or env_values.get("SARVAM_TTS_TELUGU_SPEAKER")
-            or settings.SARVAM_TTS_TELUGU_SPEAKER
-        ).strip(),
+    return {
+        "provider": (settings.CODEROAST_TTS_PROVIDER or "browser").strip().lower(),
+        "api_key": settings.SARVAM_API_KEY.strip(),
+        "model": (settings.SARVAM_TTS_MODEL or "bulbul:v3").strip(),
+        "audio_codec": (settings.SARVAM_TTS_AUDIO_CODEC or "mp3").strip().lower(),
+        "speakers": {
+            "english": settings.SARVAM_TTS_ENGLISH_SPEAKER.strip(),
+            "hindi": settings.SARVAM_TTS_HINDI_SPEAKER.strip(),
+            "telugu": settings.SARVAM_TTS_TELUGU_SPEAKER.strip(),
+        },
     }
-    return provider, api_key, model, audio_codec, speakers
 
 
 def _current_cloudant_config():
-    env_values = _load_env_values()
     return {
-        "enabled": (
-            os.environ.get("CLOUDANT_ASSETS_ENABLED")
-            or env_values.get("CLOUDANT_ASSETS_ENABLED")
-            or str(settings.CLOUDANT_ASSETS_ENABLED)
-        ).strip().lower() in {"1", "true", "yes", "on"},
-        "url": (
-            os.environ.get("CLOUDANT_URL")
-            or env_values.get("CLOUDANT_URL")
-            or settings.CLOUDANT_URL
-            or ""
-        ).strip().rstrip("/"),
-        "database": (
-            os.environ.get("CLOUDANT_DATABASE")
-            or env_values.get("CLOUDANT_DATABASE")
-            or settings.CLOUDANT_DATABASE
-            or ""
-        ).strip(),
-        "username": (
-            os.environ.get("CLOUDANT_USERNAME")
-            or env_values.get("CLOUDANT_USERNAME")
-            or settings.CLOUDANT_USERNAME
-            or ""
-        ).strip(),
-        "password": (
-            os.environ.get("CLOUDANT_PASSWORD")
-            or env_values.get("CLOUDANT_PASSWORD")
-            or settings.CLOUDANT_PASSWORD
-            or ""
-        ).strip(),
-        "bearer_token": (
-            os.environ.get("CLOUDANT_BEARER_TOKEN")
-            or env_values.get("CLOUDANT_BEARER_TOKEN")
-            or settings.CLOUDANT_BEARER_TOKEN
-            or ""
-        ).strip(),
-        "asset_group": (
-            os.environ.get("CLOUDANT_ASSET_GROUP")
-            or env_values.get("CLOUDANT_ASSET_GROUP")
-            or settings.CLOUDANT_ASSET_GROUP
-            or "coderoast"
-        ).strip(),
+        "enabled": bool(settings.CLOUDANT_ASSETS_ENABLED),
+        "url": settings.CLOUDANT_URL.strip().rstrip("/"),
+        "database": settings.CLOUDANT_DATABASE.strip(),
+        "username": settings.CLOUDANT_USERNAME.strip(),
+        "password": settings.CLOUDANT_PASSWORD.strip(),
+        "bearer_token": settings.CLOUDANT_BEARER_TOKEN.strip(),
+        "asset_group": (settings.CLOUDANT_ASSET_GROUP or "coderoast").strip(),
     }
 
 
-def _cloudant_headers(config):
+def _cloudant_headers(cloudant_config):
     headers = {"Content-Type": "application/json"}
-    if config["bearer_token"]:
-        headers["Authorization"] = f"Bearer {config['bearer_token']}"
+    if cloudant_config["bearer_token"]:
+        headers["Authorization"] = f"Bearer {cloudant_config['bearer_token']}"
         return headers
-    if config["username"] and config["password"]:
-        raw = f"{config['username']}:{config['password']}".encode("utf-8")
-        headers["Authorization"] = f"Basic {b64encode(raw).decode('ascii')}"
+
+    if cloudant_config["username"] and cloudant_config["password"]:
+        raw_credentials = f"{cloudant_config['username']}:{cloudant_config['password']}".encode("utf-8")
+        headers["Authorization"] = f"Basic {b64encode(raw_credentials).decode('ascii')}"
     return headers
 
 
-def _cloudant_request(config, path, payload):
+def _cloudant_request(cloudant_config, path, payload):
     req = request.Request(
-        f"{config['url']}/{quote(config['database'])}/{path.lstrip('/')}",
+        f"{cloudant_config['url']}/{quote(cloudant_config['database'])}/{path.lstrip('/')}",
         data=json.dumps(payload).encode("utf-8"),
-        headers=_cloudant_headers(config),
+        headers=_cloudant_headers(cloudant_config),
         method="POST",
     )
     with request.urlopen(req, timeout=20) as response:
@@ -410,10 +319,12 @@ def _cloudant_request(config, path, payload):
 def _normalize_cloudant_media_doc(doc):
     if not isinstance(doc, dict):
         return None
+
     name = str(doc.get("name") or doc.get("title") or "").strip()
     url = str(doc.get("url") or doc.get("assetUrl") or "").strip()
     if not name or not url:
         return None
+
     tags = doc.get("tags") or ["general"]
     if not isinstance(tags, list):
         tags = [str(tags)]
@@ -424,6 +335,7 @@ def _normalize_cloudant_media_doc(doc):
 def _normalize_cloudant_sfx_doc(doc):
     if not isinstance(doc, dict):
         return None
+
     label = str(doc.get("label") or doc.get("name") or "").strip()
     url = str(doc.get("url") or doc.get("assetUrl") or "").strip()
     bucket = str(doc.get("bucket") or "crowd").strip().lower()
@@ -433,16 +345,21 @@ def _normalize_cloudant_sfx_doc(doc):
 
 
 def _fetch_cloudant_assets():
-    config = _current_cloudant_config()
-    if not config["enabled"]:
+    cloudant_config = _current_cloudant_config()
+    if not cloudant_config["enabled"]:
         return None
-    if not config["url"] or not config["database"]:
+
+    if not cloudant_config["url"] or not cloudant_config["database"]:
         return {
             "enabled": False,
             "source": "local",
             "reason": "Cloudant is enabled but CLOUDANT_URL or CLOUDANT_DATABASE is missing.",
         }
-    if not config["bearer_token"] and not (config["username"] and config["password"]):
+
+    has_auth = cloudant_config["bearer_token"] or (
+        cloudant_config["username"] and cloudant_config["password"]
+    )
+    if not has_auth:
         return {
             "enabled": False,
             "source": "local",
@@ -450,11 +367,11 @@ def _fetch_cloudant_assets():
         }
 
     response_data = _cloudant_request(
-        config,
+        cloudant_config,
         "_find",
         {
             "selector": {
-                "assetGroup": config["asset_group"],
+                "assetGroup": cloudant_config["asset_group"],
                 "enabled": True,
                 "assetType": {"$in": ["meme", "gif", "sfx"]},
             },
@@ -466,6 +383,7 @@ def _fetch_cloudant_assets():
     memes = []
     gifs = []
     soundboard = {"crowd": [], "evil": [], "cheer": []}
+
     for doc in docs:
         asset_type = str(doc.get("assetType") or "").strip().lower()
         if asset_type == "meme":
@@ -480,29 +398,15 @@ def _fetch_cloudant_assets():
             sound = _normalize_cloudant_sfx_doc(doc)
             if sound:
                 soundboard[sound["bucket"]].append(sound["clip"])
+
     return {
         "enabled": bool(memes or gifs or any(soundboard.values())),
         "source": "cloudant",
-        "assetGroup": config["asset_group"],
+        "assetGroup": cloudant_config["asset_group"],
         "memes": memes,
         "gifs": gifs,
         "soundboard": {"outro": soundboard},
     }
-
-
-@require_http_methods(["GET", "OPTIONS"])
-def assets(request):
-    if request.method == "OPTIONS":
-        return _corsify(JsonResponse({"ok": True}))
-    try:
-        payload = _fetch_cloudant_assets()
-    except (error.HTTPError, error.URLError, ValueError, json.JSONDecodeError) as exc:
-        payload = {
-            "enabled": False,
-            "source": "local",
-            "reason": str(exc),
-        }
-    return _corsify(JsonResponse(payload or {"enabled": False, "source": "local"}))
 
 
 def _call_gemini_once(code, language, roast_language, api_key, model):
@@ -515,10 +419,12 @@ def _call_gemini_once(code, language, roast_language, api_key, model):
             },
         }
     ).encode("utf-8")
-    last_exc = None
+
+    last_exception = None
     for attempt, delay_seconds in enumerate((0, 1.2, 2.5), start=1):
         if delay_seconds:
             time.sleep(delay_seconds)
+
         req = request.Request(
             GEMINI_API_URL.format(model=model, api_key=api_key),
             data=body,
@@ -529,36 +435,39 @@ def _call_gemini_once(code, language, roast_language, api_key, model):
             with request.urlopen(req, timeout=30) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
-            last_exc = exc
+            last_exception = exc
             if exc.code not in RETRYABLE_STATUS_CODES or attempt == 3:
                 raise
         except error.URLError as exc:
-            last_exc = exc
+            last_exception = exc
             if attempt == 3:
                 raise
-    if last_exc:
-        raise last_exc
+
+    if last_exception:
+        raise last_exception
     raise RuntimeError("Gemini request failed before a response was produced.")
 
 
 def _call_gemini(code, language, roast_language, api_key, primary_model):
-    last_exc = None
-    models_tried = []
-    for model in _candidate_gemini_models(primary_model):
-        models_tried.append(model)
+    last_exception = None
+    tried_models = []
+
+    for model_name in _candidate_gemini_models(primary_model):
+        tried_models.append(model_name)
         try:
-            response_data = _call_gemini_once(code, language, roast_language, api_key, model)
-            return _parse_roast_payload(response_data), model
+            response_data = _call_gemini_once(code, language, roast_language, api_key, model_name)
+            return _parse_roast_payload(response_data), model_name
         except error.HTTPError as exc:
-            last_exc = exc
-            setattr(last_exc, "models_tried", models_tried.copy())
-            if exc.code not in RETRYABLE_STATUS_CODES | {404}:
+            last_exception = exc
+            setattr(last_exception, "models_tried", tried_models.copy())
+            if exc.code not in (RETRYABLE_STATUS_CODES | {404}):
                 raise
         except (error.URLError, ValueError, json.JSONDecodeError) as exc:
-            last_exc = exc
-            setattr(last_exc, "models_tried", models_tried.copy())
-    if last_exc:
-        raise last_exc
+            last_exception = exc
+            setattr(last_exception, "models_tried", tried_models.copy())
+
+    if last_exception:
+        raise last_exception
     raise RuntimeError("Gemini request failed before a response was produced.")
 
 
@@ -576,18 +485,18 @@ def _sarvam_mime_type(audio_codec):
 
 
 def _build_sarvam_tts_payload(text, roast_language):
-    provider, api_key, model, audio_codec, speakers = _current_sarvam_config()
-    if provider != "sarvam" or not api_key or not text.strip():
+    sarvam_config = _current_sarvam_config()
+    if sarvam_config["provider"] != "sarvam" or not sarvam_config["api_key"] or not text.strip():
         return None
 
     language_code = SARVAM_LANGUAGE_CODES.get(roast_language, "en-IN")
+    speaker = sarvam_config["speakers"].get(roast_language) or sarvam_config["speakers"].get("english")
     body = {
         "text": text.strip(),
         "target_language_code": language_code,
-        "model": model,
-        "output_audio_codec": audio_codec,
+        "model": sarvam_config["model"],
+        "output_audio_codec": sarvam_config["audio_codec"],
     }
-    speaker = speakers.get(roast_language) or speakers.get("english")
     if speaker:
         body["speaker"] = speaker
 
@@ -596,7 +505,7 @@ def _build_sarvam_tts_payload(text, roast_language):
         data=json.dumps(body).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
-            "api-subscription-key": api_key,
+            "api-subscription-key": sarvam_config["api_key"],
         },
         method="POST",
     )
@@ -612,67 +521,99 @@ def _build_sarvam_tts_payload(text, roast_language):
     return {
         "provider": "sarvam",
         "mode": "server_tts",
-        "audioSrc": f"data:{_sarvam_mime_type(audio_codec)};base64,{audio_base64}",
+        "audioSrc": f"data:{_sarvam_mime_type(sarvam_config['audio_codec'])};base64,{audio_base64}",
         "speaker": speaker or "default",
         "languageCode": language_code,
-        "model": model,
+        "model": sarvam_config["model"],
     }
 
 
-@require_http_methods(["POST", "OPTIONS"])
-def roast(request):
-    if request.method == "OPTIONS":
-        return _corsify(JsonResponse({"ok": True}))
-
+def _parse_request_payload(request_obj):
     try:
-        payload = json.loads(request.body.decode("utf-8"))
+        payload = json.loads(request_obj.body.decode("utf-8"))
     except json.JSONDecodeError:
-        return _corsify(JsonResponse(_normalize_payload({
-            "errorMessage": "Invalid JSON request body.",
-            "mistakeLine": "The browser sent something the roast endpoint could not parse.",
-            "fix": "Send a JSON payload with code and language.",
-        }), status=400))
+        raise ValueError("invalid_json")
 
     code = (payload.get("code") or "").strip()
     language = (payload.get("language") or "").strip()
     roast_language = (payload.get("roastLanguage") or "english").strip().lower()
     if roast_language not in ROAST_LANGUAGE_RULES:
         roast_language = "english"
+    return code, language, roast_language
+
+
+@require_http_methods(["GET", "OPTIONS"])
+def assets(request):
+    if request.method == "OPTIONS":
+        return _json_response({"ok": True})
+
+    try:
+        payload = _fetch_cloudant_assets()
+    except (error.HTTPError, error.URLError, ValueError, json.JSONDecodeError) as exc:
+        payload = {
+            "enabled": False,
+            "source": "local",
+            "reason": str(exc),
+        }
+    return _json_response(payload or {"enabled": False, "source": "local"})
+
+
+@require_http_methods(["POST", "OPTIONS"])
+def roast(request):
+    if request.method == "OPTIONS":
+        return _json_response({"ok": True})
+
+    try:
+        code, language, roast_language = _parse_request_payload(request)
+    except ValueError:
+        return _error_response(
+            "Invalid JSON request body.",
+            "The browser sent something the roast endpoint could not parse.",
+            "Send a JSON payload with code and language.",
+            status=400,
+        )
+
     if not code or not language:
-        return _corsify(JsonResponse(_normalize_payload({
-            "errorMessage": "Missing code or language.",
-            "mistakeLine": "CodeRoast AI needs both the source code and selected language.",
-            "fix": "Fill the editor and choose a language before running.",
-        }), status=400))
+        return _error_response(
+            "Missing code or language.",
+            "CodeRoast AI needs both the source code and selected language.",
+            "Fill the editor and choose a language before running.",
+            status=400,
+        )
 
     api_key, model = _current_gemini_config()
     if not api_key:
-        return _corsify(JsonResponse(_normalize_payload({
-            "errorMessage": "Gemini API key is not configured.",
-            "mistakeLine": "The backend could not find GOOGLE_AI_STUDIO_API_KEY or GEMINI_API_KEY.",
-            "fix": "Add the Gemini key to .env and restart Django.",
-        }), status=500))
+        return _error_response(
+            "Gemini API key is not configured.",
+            "The backend could not find GOOGLE_AI_STUDIO_API_KEY or GEMINI_API_KEY.",
+            "Add the Gemini key to .env and restart Django.",
+            status=500,
+        )
 
     try:
         roast_payload, used_model = _call_gemini(code, language, roast_language, api_key, model)
         response_payload = _normalize_payload(roast_payload)
         response_payload["modelUsed"] = used_model
+
         try:
             tts_payload = _build_sarvam_tts_payload(response_payload.get("roast", ""), roast_language)
         except (error.HTTPError, error.URLError, ValueError, json.JSONDecodeError):
             tts_payload = None
+
         if tts_payload:
             response_payload["tts"] = tts_payload
-        return _corsify(JsonResponse(response_payload))
+        return _json_response(response_payload)
     except error.HTTPError as exc:
-        return _corsify(JsonResponse(_build_http_error_payload(exc), status=exc.code))
+        return _json_response(_build_http_error_payload(exc), status=exc.code)
     except (error.URLError, ValueError, json.JSONDecodeError) as exc:
-        fallback = _normalize_payload({
-            "errorMessage": "Gemini response parsing failed.",
-            "mistakeLine": "The AI backend did not return valid roast JSON this time.",
-            "fix": "Retry the request. If it keeps failing, verify the API key and model name.",
-            "roast": "The roast cannon jammed mid-shot. Even the AI forgot its commas. Try the button again.",
-            "fixCode": code,
-        })
+        fallback = _normalize_payload(
+            {
+                "errorMessage": "Gemini response parsing failed.",
+                "mistakeLine": "The AI backend did not return valid roast JSON this time.",
+                "fix": "Retry the request. If it keeps failing, verify the API key and model name.",
+                "roast": "The roast cannon jammed mid-shot. Even the AI forgot its commas. Try the button again.",
+                "fixCode": code,
+            }
+        )
         fallback["details"] = str(exc)
-        return _corsify(JsonResponse(fallback, status=502))
+        return _json_response(fallback, status=502)

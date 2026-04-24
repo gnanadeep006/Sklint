@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from urllib.parse import parse_qs, urlparse
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -40,6 +41,49 @@ def _strip_env_value(value):
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
         return value[1:-1]
     return value
+
+
+def _database_config_from_url(database_url):
+    parsed = urlparse(database_url)
+    engine_map = {
+        "postgres": "django.db.backends.postgresql",
+        "postgresql": "django.db.backends.postgresql",
+        "pgsql": "django.db.backends.postgresql",
+        "sqlite": "django.db.backends.sqlite3",
+    }
+    engine = engine_map.get(parsed.scheme)
+    if not engine:
+        raise ImproperlyConfigured(
+            "Unsupported DATABASE_URL scheme. Use postgres://, postgresql://, pgsql://, or sqlite://."
+        )
+
+    if engine == "django.db.backends.sqlite3":
+        sqlite_path = (parsed.netloc + parsed.path).strip("/") or parsed.path or BASE_DIR / "db.sqlite3"
+        if sqlite_path == ":memory:":
+            name = sqlite_path
+        else:
+            name = str((BASE_DIR / sqlite_path).resolve()) if not os.path.isabs(sqlite_path) else sqlite_path
+        return {
+            "ENGINE": engine,
+            "NAME": name,
+        }
+
+    options = {}
+    query_params = parse_qs(parsed.query)
+    sslmode = query_params.get("sslmode", ["require"])[0]
+    if sslmode:
+        options["sslmode"] = sslmode
+
+    return {
+        "ENGINE": engine,
+        "NAME": parsed.path.lstrip("/"),
+        "USER": parsed.username or "",
+        "PASSWORD": parsed.password or "",
+        "HOST": parsed.hostname or "",
+        "PORT": str(parsed.port or ""),
+        "CONN_MAX_AGE": config("DJANGO_DB_CONN_MAX_AGE", default=600, cast=int),
+        "OPTIONS": options,
+    }
 
 
 # Load .env into process environment without extra dependencies.
@@ -111,6 +155,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -144,12 +189,18 @@ WSGI_APPLICATION = 'project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = config('DATABASE_URL', default='').strip()
+if DATABASE_URL:
+    DATABASES = {
+        'default': _database_config_from_url(DATABASE_URL),
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -191,6 +242,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'statics',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -202,6 +254,11 @@ GOOGLE_AI_STUDIO_API_KEY = config(
 GOOGLE_AI_MODEL = config(
     'CODEROAST_GEMINI_MODEL',
     default=config('GOOGLE_AI_MODEL', default='gemini-2.5-flash'),
+)
+CODEROAST_GEMINI_FALLBACK_MODELS = config(
+    'CODEROAST_GEMINI_FALLBACK_MODELS',
+    default=config('GOOGLE_AI_FALLBACK_MODELS', default='gemini-2.5-flash-lite,gemini-2.0-flash'),
+    cast=Csv(),
 )
 CODEROAST_TTS_PROVIDER = config('CODEROAST_TTS_PROVIDER', default='browser')
 SARVAM_API_KEY = config('SARVAM_API_KEY', default='')

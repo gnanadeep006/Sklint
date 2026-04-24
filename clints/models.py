@@ -90,6 +90,16 @@ class FeaturedProject(models.Model):
     class Meta:
         ordering = ["order", "id"]
 
+    @property
+    def image_src(self):
+        if self.image_file:
+            return self.image_file.url
+        return self.image_url
+
+    @property
+    def resolved_slug(self):
+        return self.slug or f"project-{self.id}"
+
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.title)[:120] or "project"
